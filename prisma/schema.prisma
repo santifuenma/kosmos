@@ -8,3 +8,171 @@ generator client {
 datasource db {
   provider = "sqlite"
 }
+
+// ─────────────────────────────────────────
+// USUARIOS
+// ─────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  strategy       Strategy?
+  dailyIntention DailyIntention[]
+  sessions       Session[]
+}
+
+// ─────────────────────────────────────────
+// ESTRATEGIA DEL TRADER
+// ─────────────────────────────────────────
+
+model Strategy {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conditions StrategyCondition[]
+  rules      StrategyRule[]
+}
+
+// ─────────────────────────────────────────
+// CATÁLOGOS DEL SISTEMA
+// ─────────────────────────────────────────
+
+model EntryCondition {
+  id          String @id @default(cuid())
+  code        String @unique
+  label       String
+  description String
+
+  strategyConditions StrategyCondition[]
+  tradeViolations    TradeViolation[]
+}
+
+model BehavioralRule {
+  id          String @id @default(cuid())
+  code        String @unique
+  label       String
+  description String
+  scope       String // "PER_TRADE" | "PER_SESSION"
+
+  strategyRules      StrategyRule[]
+  tradeViolations    TradeViolation[]
+  sessionViolations  SessionViolation[]
+}
+
+// ─────────────────────────────────────────
+// TABLAS INTERMEDIAS DE ESTRATEGIA
+// ─────────────────────────────────────────
+
+model StrategyCondition {
+  id          String  @id @default(cuid())
+  strategyId  String
+  conditionId String
+  isActive    Boolean @default(true)
+
+  strategy  Strategy       @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  condition EntryCondition @relation(fields: [conditionId], references: [id])
+
+  @@unique([strategyId, conditionId])
+}
+
+model StrategyRule {
+  id         String  @id @default(cuid())
+  strategyId String
+  ruleId     String
+  isActive   Boolean @default(true)
+
+  strategy Strategy       @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  rule     BehavioralRule @relation(fields: [ruleId], references: [id])
+
+  @@unique([strategyId, ruleId])
+}
+
+// ─────────────────────────────────────────
+// INTENCIÓN DIARIA Y SESIONES
+// ─────────────────────────────────────────
+
+model DailyIntention {
+  id                 String    @id @default(cuid())
+  userId             String
+  strategyId         String
+  date               DateTime
+  maxTrades          Int
+  tradingHoursStart  String
+  tradingHoursEnd    String
+  emotionalState     String    // "NEUTRAL" | "ANXIOUS" | "CONFIDENT" | "FRUSTRATED" | "TIRED"
+  notes              String?
+  confirmedAt        DateTime?
+  createdAt          DateTime  @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session?
+
+  @@unique([userId, date])
+}
+
+model Session {
+  id          String    @id @default(cuid())
+  userId      String
+  intentionId String    @unique
+  date        DateTime
+  status      String    @default("OPEN") // "OPEN" | "CLOSED"
+  icoScore    Float?
+  createdAt   DateTime  @default(now())
+  closedAt    DateTime?
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  intention DailyIntention   @relation(fields: [intentionId], references: [id])
+  trades    Trade[]
+  violations SessionViolation[]
+}
+
+// ─────────────────────────────────────────
+// OPERACIONES Y VIOLACIONES
+// ─────────────────────────────────────────
+
+model Trade {
+  id        String   @id @default(cuid())
+  sessionId String
+  timestamp DateTime @default(now())
+  direction String   // "LONG" | "SHORT"
+  result    String   // "WIN" | "LOSS" | "BREAKEVEN"
+  pnlAmount Float?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  session    Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  violations TradeViolation[]
+}
+
+model TradeViolation {
+  id          String   @id @default(cuid())
+  tradeId     String
+  ruleId      String?
+  conditionId String?
+  type        String   // "RULE_VIOLATION" | "CONDITION_VIOLATION"
+  createdAt   DateTime @default(now())
+
+  trade     Trade           @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  rule      BehavioralRule? @relation(fields: [ruleId], references: [id])
+  condition EntryCondition? @relation(fields: [conditionId], references: [id])
+}
+
+model SessionViolation {
+  id        String   @id @default(cuid())
+  sessionId String
+  ruleId    String
+  createdAt DateTime @default(now())
+
+  session Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  rule    BehavioralRule @relation(fields: [ruleId], references: [id])
+}
