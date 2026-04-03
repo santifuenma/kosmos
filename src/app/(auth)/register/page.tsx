@@ -1,5 +1,14 @@
 'use client'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// register/page.tsx — formulario de creación de cuenta.
+//
+// El flujo es: validar en cliente → POST /api/auth/register → signIn automático.
+// Validar en el cliente antes de llamar al servidor mejora la experiencia de
+// usuario (feedback inmediato) aunque el servidor vuelva a validar igualmente
+// por seguridad (nunca se confía solo en validaciones del cliente).
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -18,7 +27,8 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
 
-    // Validaciones en cliente
+    // Validaciones en cliente para dar feedback inmediato sin esperar al servidor.
+    // El servidor las repite porque las validaciones cliente-side son bypasseables.
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('El formato del email no es válido')
       return
@@ -27,6 +37,8 @@ export default function RegisterPage() {
       setError('La contraseña debe tener al menos 6 caracteres')
       return
     }
+    // Esta validación solo tiene sentido en cliente: el servidor recibe un solo
+    // campo `password` y no puede comprobar que coincida con la confirmación.
     if (password !== confirm) {
       setError('Las contraseñas no coinciden')
       return
@@ -34,6 +46,8 @@ export default function RegisterPage() {
 
     setLoading(true)
 
+    // name.trim() || undefined: si el nombre está vacío enviamos undefined para
+    // que el servidor lo trate como campo no enviado y lo guarde como null.
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -47,7 +61,9 @@ export default function RegisterPage() {
       return
     }
 
-    // Login automático tras registro exitoso
+    // Login automático tras registro exitoso: mejora la experiencia evitando
+    // que el usuario tenga que volver a introducir sus credenciales en /login.
+    // Usamos las mismas credenciales que acaba de registrar.
     const result = await signIn('credentials', {
       email,
       password,
@@ -57,6 +73,8 @@ export default function RegisterPage() {
     setLoading(false)
 
     if (result?.error) {
+      // El registro fue exitoso pero el login falló (caso muy improbable).
+      // Informamos sin redirigir para que el usuario intente hacer login manualmente.
       setError('Cuenta creada, pero no se pudo iniciar sesión automáticamente')
       return
     }

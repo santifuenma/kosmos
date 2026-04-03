@@ -1,5 +1,13 @@
 'use client'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// login/page.tsx — formulario de inicio de sesión.
+//
+// Es un Client Component porque gestiona estado del formulario e interactúa
+// con NextAuth desde el cliente. La autenticación se delega completamente a
+// NextAuth: nosotros solo recogemos las credenciales y llamamos a `signIn`.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -17,6 +25,9 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
+    // `redirect: false` evita que NextAuth haga una redirección de página
+    // completa tras el login. Preferimos gestionar nosotros la navegación
+    // para poder mostrar errores de forma controlada antes de redirigir.
     const result = await signIn('credentials', {
       email,
       password,
@@ -26,10 +37,16 @@ export default function LoginPage() {
     setLoading(false)
 
     if (result?.error) {
+      // No distinguimos entre "email no encontrado" y "contraseña incorrecta"
+      // intencionadamente: un mensaje genérico dificulta la enumeración de
+      // cuentas existentes a un posible atacante.
       setError('Email o contraseña incorrectos')
       return
     }
 
+    // router.refresh() fuerza a Next.js a revalidar los Server Components
+    // de la nueva ruta con la sesión ya establecida. Sin él, el dashboard
+    // podría renderizarse con datos de sesión desactualizados.
     router.push('/dashboard')
     router.refresh()
   }
@@ -68,6 +85,7 @@ export default function LoginPage() {
             />
           </div>
 
+          {/* Mostramos el error solo cuando existe, sin reservar espacio vacío */}
           {error && (
             <p className="text-sm text-red-600">{error}</p>
           )}

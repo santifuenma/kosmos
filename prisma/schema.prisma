@@ -1,87 +1,125 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// ─────────────────────────────────────────────────────────────────────────────
+// schema.prisma — modelo de datos completo de la plataforma Kosmos.
+//
+// Kosmos evalúa la disciplina operativa de traders novatos calculando el ICO
+// (Índice de Coherencia Operativa): la ratio entre lo que el trader planificó
+// hacer y lo que realmente hizo en cada sesión de trading.
+//
+// Flujo principal:
+//   1. El trader define su Estrategia (condiciones de entrada + reglas)
+//   2. Antes de cada sesión declara una DailyIntention (plan del día)
+//   3. Durante la sesión registra sus operaciones (Trade)
+//   4. Al cerrar la sesión se calculan las violaciones y el ICO
+//
+// En Prisma 7 la URL de la BD se configura en prisma.config.ts, no aquí.
+// ─────────────────────────────────────────────────────────────────────────────
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
+  // SQLite es suficiente para el MVP: base de datos local sin infraestructura.
+  // En producción se migraría a PostgreSQL cambiando solo este provider y la URL.
   provider = "sqlite"
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // USUARIOS
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
+  email     String   @unique          // Identificador único de cuenta; se usa para el login
+  password  String                    // Hash bcrypt; nunca se almacena en texto plano
+  name      String?                   // Nombre visible en la UI; opcional en el registro
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Un usuario tiene como máximo una estrategia (diseño MVP: sin versionado)
   strategy       Strategy?
+  // Cada día que el trader planifica operar crea una DailyIntention
   dailyIntention DailyIntention[]
+  // Las sesiones agrupan los trades de un día concreto
   sessions       Session[]
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // ESTRATEGIA DEL TRADER
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Strategy {
   id          String   @id @default(cuid())
+  // @unique garantiza que cada usuario tenga como máximo una estrategia.
+  // Esta restricción es intencional: en el MVP no hay versionado de estrategias.
   userId      String   @unique
-  name        String
-  description String?
+  name        String                 // Nombre que el trader da a su sistema operativo
+  description String?                // Descripción libre de la metodología
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // onDelete Cascade: si se elimina el usuario, su estrategia se borra también
   user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Condiciones de entrada seleccionadas por el trader del catálogo del sistema
   conditions StrategyCondition[]
+  // Reglas conductuales seleccionadas por el trader del catálogo del sistema
   rules      StrategyRule[]
 }
 
-// ─────────────────────────────────────────
-// CATÁLOGOS DEL SISTEMA
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CATÁLOGOS DEL SISTEMA (datos maestros)
+// Estos modelos contienen los ítems predefinidos que el sistema ofrece a todos
+// los traders. No los edita el usuario; los gestiona el administrador/seed.
+// ─────────────────────────────────────────────────────────────────────────────
 
 model EntryCondition {
   id          String @id @default(cuid())
+  // Identificador interno estable para referencias en código (ej: "TREND_CONFIRM")
   code        String @unique
+  // Nombre corto para mostrar en la UI (ej: "Tendencia Confirmada")
   label       String
+  // Explicación completa de qué debe cumplirse para que esta condición sea válida
   description String
 
+  // Relaciones: cada condición puede estar en múltiples estrategias y
+  // puede ser objeto de violaciones en trades concretos
   strategyConditions StrategyCondition[]
   tradeViolations    TradeViolation[]
 }
 
 model BehavioralRule {
   id          String @id @default(cuid())
-  code        String @unique
-  label       String
-  description String
-  scope       String // "PER_TRADE" | "PER_SESSION"
+  code        String @unique          // Identificador interno estable
+  label       String                  // Nombre corto para la UI
+  description String                  // Descripción de qué comportamiento exige la regla
+  // "PER_TRADE": se evalúa en cada operación individual (ej: "No mover el SL")
+  // "PER_SESSION": se evalúa una vez al cerrar la sesión (ej: "No hacer revenge trading")
+  scope       String
 
   strategyRules      StrategyRule[]
   tradeViolations    TradeViolation[]
   sessionViolations  SessionViolation[]
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // TABLAS INTERMEDIAS DE ESTRATEGIA
-// ─────────────────────────────────────────
+// Vinculan los catálogos con la estrategia de cada usuario.
+// Al crear una estrategia se insertan automáticamente todos los ítems del
+// catálogo con isActive: false, para que el trader active solo los que aplica.
+// ─────────────────────────────────────────────────────────────────────────────
 
 model StrategyCondition {
   id          String  @id @default(cuid())
   strategyId  String
   conditionId String
+  // Si isActive es true, esta condición se requiere para validar una entrada.
+  // El trader puede desactivar condiciones que no aplican a su metodología.
   isActive    Boolean @default(true)
 
   strategy  Strategy       @relation(fields: [strategyId], references: [id], onDelete: Cascade)
   condition EntryCondition @relation(fields: [conditionId], references: [id])
 
+  // Garantiza que cada condición aparezca solo una vez por estrategia
   @@unique([strategyId, conditionId])
 }
 
@@ -89,6 +127,8 @@ model StrategyRule {
   id         String  @id @default(cuid())
   strategyId String
   ruleId     String
+  // Si isActive es true, el sistema comprobará si el trader siguió esta regla
+  // y la incluirá en el cálculo del ICO.
   isActive   Boolean @default(true)
 
   strategy Strategy       @relation(fields: [strategyId], references: [id], onDelete: Cascade)
@@ -97,82 +137,113 @@ model StrategyRule {
   @@unique([strategyId, ruleId])
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // INTENCIÓN DIARIA Y SESIONES
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 model DailyIntention {
   id                 String    @id @default(cuid())
   userId             String
-  strategyId         String
-  date               DateTime
+  strategyId         String    // Referencia a la estrategia usada ese día (snapshot implícito)
+  date               DateTime  // Fecha del día de trading (sin hora; se normaliza al guardar)
+  // Límite de operaciones que el trader se compromete a no superar.
+  // Superar este límite genera una violación PER_SESSION (MAX_TRADES_LIMIT).
   maxTrades          Int
+  // Horario de trading en formato "HH:mm". Operar fuera genera violación TRADING_HOURS.
   tradingHoursStart  String
   tradingHoursEnd    String
-  emotionalState     String    // "NEUTRAL" | "ANXIOUS" | "CONFIDENT" | "FRUSTRATED" | "TIRED"
-  notes              String?
+  // Estado emocional auto-declarado antes de operar. Se usa para correlacionar
+  // el estado emocional con el rendimiento en el análisis posterior.
+  // Valores: "NEUTRAL" | "ANXIOUS" | "CONFIDENT" | "FRUSTRATED" | "TIRED"
+  emotionalState     String
+  notes              String?   // Notas libres del trader sobre el día
+  // Timestamp del momento en que el trader confirma la intención.
+  // Hasta que no se confirma, no se puede abrir sesión: obliga a reflexionar
+  // antes de operar, reduciendo las entradas impulsivas.
   confirmedAt        DateTime?
   createdAt          DateTime  @default(now())
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Una intención puede generar una sola sesión (o ninguna si el trader no operó)
   session Session?
 
+  // Un trader no puede tener dos intenciones el mismo día: fuerza a planificar
+  // una única sesión diaria y evita manipular los datos posteriores.
   @@unique([userId, date])
 }
 
 model Session {
   id          String    @id @default(cuid())
   userId      String
+  // @unique: cada intención diaria puede dar lugar a una sola sesión.
+  // Si el trader abre la app otro día, crea una nueva intención y sesión.
   intentionId String    @unique
-  date        DateTime
-  status      String    @default("OPEN") // "OPEN" | "CLOSED"
+  date        DateTime  // Fecha de la sesión (normalmente igual a la de la intención)
+  // "OPEN": sesión en curso; el trader puede registrar trades
+  // "CLOSED": sesión cerrada; el ICO ya está calculado y es inmutable
+  status      String    @default("OPEN")
+  // Puntuación ICO (0-100). Se calcula al cerrar la sesión comparando
+  // las violaciones registradas contra las reglas y condiciones activas.
+  // Es null mientras la sesión está abierta.
   icoScore    Float?
   createdAt   DateTime  @default(now())
-  closedAt    DateTime?
+  closedAt    DateTime? // Timestamp del cierre; null mientras está abierta
 
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   intention DailyIntention   @relation(fields: [intentionId], references: [id])
   trades    Trade[]
+  // Violaciones de reglas PER_SESSION detectadas al cierre de la sesión
   violations SessionViolation[]
 }
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // OPERACIONES Y VIOLACIONES
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Trade {
   id        String   @id @default(cuid())
   sessionId String
-  timestamp DateTime @default(now())
-  direction String   // "LONG" | "SHORT"
-  result    String   // "WIN" | "LOSS" | "BREAKEVEN"
-  pnlAmount Float?
-  notes     String?
+  timestamp DateTime @default(now()) // Momento de ejecución de la operación
+  // "LONG": operación alcista (se compra esperando subida de precio)
+  // "SHORT": operación bajista (se vende esperando bajada de precio)
+  direction String
+  // Resultado objetivo de la operación al cerrarla
+  // "WIN" | "LOSS" | "BREAKEVEN"
+  result    String
+  pnlAmount Float?   // Ganancia/pérdida en unidades monetarias; opcional si no se registra
+  notes     String?  // Anotaciones del trader sobre la operación concreta
   createdAt DateTime @default(now())
 
   session    Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  // Violaciones de reglas PER_TRADE o de condiciones de entrada para este trade
   violations TradeViolation[]
 }
 
 model TradeViolation {
   id          String   @id @default(cuid())
   tradeId     String
-  ruleId      String?
-  conditionId String?
-  type        String   // "RULE_VIOLATION" | "CONDITION_VIOLATION"
+  // Solo uno de ruleId o conditionId estará relleno según el tipo de violación
+  ruleId      String?  // Relleno si es una violación de regla conductual PER_TRADE
+  conditionId String?  // Relleno si es una violación de condición de entrada
+  // "RULE_VIOLATION": el trader no siguió una regla conductual (ej: movió el SL)
+  // "CONDITION_VIOLATION": entró sin que se cumplieran todas las condiciones activas
+  type        String
   createdAt   DateTime @default(now())
 
   trade     Trade           @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  // Null cuando la violación es de condición (conditionId relleno en su lugar)
   rule      BehavioralRule? @relation(fields: [ruleId], references: [id])
+  // Null cuando la violación es de regla (ruleId relleno en su lugar)
   condition EntryCondition? @relation(fields: [conditionId], references: [id])
 }
 
 model SessionViolation {
   id        String   @id @default(cuid())
   sessionId String
-  ruleId    String
+  ruleId    String   // Siempre apunta a una BehavioralRule de scope PER_SESSION
   createdAt DateTime @default(now())
 
   session Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  // La regla específica que el trader incumplió durante la sesión completa
   rule    BehavioralRule @relation(fields: [ruleId], references: [id])
 }
