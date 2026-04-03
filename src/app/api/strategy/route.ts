@@ -1,0 +1,168 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession, authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Parámetros de include reutilizados en las tres operaciones.
+//
+// Siempre devolvemos la estrategia con sus condiciones y reglas expandidas
+// para que el cliente no tenga que hacer llamadas adicionales. Ordenamos
+// por label para que la lista sea predecible y no cambie entre renders.
+// ─────────────────────────────────────────────────────────────────────────────
+const strategyInclude = {
+  conditions: {
+    include: { condition: true },
+    orderBy: { condition: { label: 'asc' as const } },
+  },
+  rules: {
+    include: { rule: true },
+    orderBy: { rule: { label: 'asc' as const } },
+  },
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/strategy
+// Devuelve la estrategia del usuario autenticado con todas sus relaciones.
+// Responde 404 si el usuario aún no ha configurado su estrategia.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  }
+
+  // Buscamos la estrategia del usuario autenticado.
+  // En el MVP cada usuario tiene como máximo una estrategia (@unique userId).
+  const strategy = await prisma.strategy.findUnique({
+    where: { userId: session.user.id },
+    include: strategyInclude,
+  })
+
+  if (!strategy) {
+    return NextResponse.json(
+      { error: 'El usuario no tiene estrategia configurada' },
+      { status: 404 },
+    )
+  }
+
+  return NextResponse.json(strategy)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/strategy
+// Crea la estrategia del usuario y la vincula automáticamente con TODO el
+// catálogo (condiciones y reglas) en estado inactivo.
+//
+// Iniciamos todos los ítems como isActive: false porque el usuario debe
+// revisar el catálogo y activar únicamente los que aplican a su operativa.
+// Si los iniciáramos activos, la evaluación ICO penalizaría desde el primer
+// día ítems que el trader puede no haber considerado.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  }
+
+  // Verificamos antes del insert para devolver un error claro.
+  // Aunque @unique en userId lo impediría igualmente, el mensaje de Prisma
+  // sería genérico y confundente para el cliente.
+  const existing = await prisma.strategy.findUnique({
+    where: { userId: session.user.id },
+  })
+  if (existing) {
+    return NextResponse.json(
+      { error: 'Ya tienes una estrategia. Solo se permite una por usuario.' },
+      { status: 409 },
+    )
+  }
+
+  const { name, description } = await request.json()
+  if (!name?.trim()) {
+    return NextResponse.json(
+      { error: 'El nombre de la estrategia es obligatorio' },
+      { status: 400 },
+    )
+  }
+
+  // Obtenemos el catálogo completo antes de la transacción de creación.
+  // Usamos Promise.all para hacer las dos queries en paralelo y reducir latencia.
+  const [allConditions, allRules] = await Promise.all([
+    prisma.entryCondition.findMany(),
+    prisma.behavioralRule.findMany(),
+  ])
+
+  const strategy = await prisma.strategy.create({
+    data: {
+      userId: session.user.id,
+      name: name.trim(),
+      description: description?.trim() || null,
+      // Creamos los vínculos con el catálogo dentro del mismo create de Prisma
+      // para que sea atómico: si falla algún vínculo, no se crea la estrategia.
+      conditions: {
+        create: allConditions.map((c) => ({
+          conditionId: c.id,
+          isActive: false,
+        })),
+      },
+      rules: {
+        create: allRules.map((r) => ({
+          ruleId: r.id,
+          isActive: false,
+        })),
+      },
+    },
+    include: strategyInclude,
+  })
+
+  return NextResponse.json(strategy, { status: 201 })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT /api/strategy
+// Actualiza el nombre y/o descripción de la estrategia.
+// Solo se actualizan los campos que vengan en el body (actualización parcial).
+// ─────────────────────────────────────────────────────────────────────────────
+export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  }
+
+  const body = await request.json()
+  const { name, description } = body
+
+  // Construimos el objeto de actualización solo con los campos recibidos.
+  // Así el cliente puede enviar solo el campo que cambió sin pisar los demás.
+  const data: Record<string, string | null> = {}
+  if (name !== undefined) data.name = name.trim()
+  if (description !== undefined) data.description = description?.trim() || null
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
+  }
+  if (data.name === '') {
+    return NextResponse.json({ error: 'El nombre no puede estar vacío' }, { status: 400 })
+  }
+
+  // updateMany con userId en el where nos evita una query de lookup previa.
+  // Si el usuario no tiene estrategia, count es 0 y respondemos 404.
+  const result = await prisma.strategy.updateMany({
+    where: { userId: session.user.id },
+    data,
+  })
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: 'No tienes ninguna estrategia que actualizar' },
+      { status: 404 },
+    )
+  }
+
+  const updated = await prisma.strategy.findUnique({
+    where: { userId: session.user.id },
+    include: strategyInclude,
+  })
+
+  return NextResponse.json(updated)
+}
