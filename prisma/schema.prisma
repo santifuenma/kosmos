@@ -55,6 +55,16 @@ model Strategy {
   userId      String   @unique
   name        String                 // Nombre que el trader da a su sistema operativo
   description String?                // Descripción libre de la metodología
+
+  // Límites operativos fijos de la estrategia.
+  // Se definen aquí (no en la intención diaria) para garantizar consistencia:
+  // un trader que cambia su máximo de operaciones cada día según el estado
+  // de ánimo no está siguiendo una estrategia, está improvisando.
+  // La intención diaria hereda estos valores automáticamente.
+  maxTrades         Int    @default(3)       // Máximo de trades permitidos por sesión
+  tradingHoursStart String @default("09:00") // Inicio del horario operativo (formato HH:mm)
+  tradingHoursEnd   String @default("11:30") // Fin del horario operativo (formato HH:mm)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

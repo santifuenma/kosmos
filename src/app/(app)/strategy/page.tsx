@@ -13,7 +13,7 @@ import type { StrategyWithRelations, StrategyConditionItem, StrategyRuleItem } f
 //
 // La página tiene dos estados excluyentes:
 //  A) Sin estrategia → formulario de creación
-//  B) Con estrategia → vista de gestión con edición de nombre, toggles, etc.
+//  B) Con estrategia → vista de gestión con edición de campos, toggles, etc.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function StrategyPage() {
@@ -65,7 +65,11 @@ function ErrorView({ message }: { message: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CreateStrategyForm — formulario para el primer acceso (sin estrategia)
+// CreateStrategyForm — formulario para el primer acceso (sin estrategia).
+//
+// Incluye los límites operativos con sus valores por defecto ya rellenados
+// para que el trader los vea desde el primer momento y entienda que forman
+// parte de la estrategia, no de la intención diaria.
 // ─────────────────────────────────────────────────────────────────────────────
 function CreateStrategyForm({
   onCreated,
@@ -74,18 +78,35 @@ function CreateStrategyForm({
 }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  // Defaults alineados con los @default del schema de Prisma
+  const [maxTrades, setMaxTrades] = useState(3)
+  const [tradingHoursStart, setTradingHoursStart] = useState('09:00')
+  const [tradingHoursEnd, setTradingHoursEnd] = useState('11:30')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+
+    // Validación del rango horario en cliente para feedback inmediato
+    if (tradingHoursStart >= tradingHoursEnd) {
+      setError('El horario de inicio debe ser anterior al de fin')
+      return
+    }
+
     setSubmitting(true)
 
     const res = await fetch('/api/strategy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({
+        name,
+        description,
+        maxTrades,
+        tradingHoursStart,
+        tradingHoursEnd,
+      }),
     })
 
     if (!res.ok) {
@@ -135,6 +156,55 @@ function CreateStrategyForm({
             placeholder="Describe brevemente tu enfoque operativo..."
             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
+        </div>
+
+        {/* Separador visual para los límites operativos */}
+        <div className="pt-2 border-t border-gray-200">
+          <p className="text-sm font-medium text-gray-700 mb-3">Límites operativos</p>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Máximo de operaciones por sesión
+              </label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={maxTrades}
+                onChange={(e) => setMaxTrades(parseInt(e.target.value, 10))}
+                required
+                className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Hora de inicio
+                </label>
+                <input
+                  type="time"
+                  value={tradingHoursStart}
+                  onChange={(e) => setTradingHoursStart(e.target.value)}
+                  required
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Hora de fin
+                </label>
+                <input
+                  type="time"
+                  value={tradingHoursEnd}
+                  onChange={(e) => setTradingHoursEnd(e.target.value)}
+                  required
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -188,7 +258,9 @@ function ManageStrategyView({
         </span>
       </div>
 
-      {/* Sección de nombre y descripción */}
+      {/* StrategyInfoSection gestiona tanto la información general como los
+          límites operativos en un único componente con un único botón de guardado.
+          Se renderizan como dos cards distintos pero comparten estado y acción. */}
       <StrategyInfoSection strategy={strategy} onUpdate={onUpdate} />
 
       {/* Sección de condiciones de entrada */}
@@ -279,7 +351,13 @@ function ManageStrategyView({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// StrategyInfoSection — edición del nombre y descripción de la estrategia
+// StrategyInfoSection — edición de la información general y los límites operativos.
+//
+// Gestiona ambos grupos de campos en un único componente con un único botón
+// de guardado. Aunque se renderizan como dos tarjetas visualmente distintas,
+// comparten el mismo estado local y la misma llamada PUT para garantizar
+// consistencia: el trader no puede guardar solo el nombre sin los límites,
+// evitando estados parciales contradictorios.
 // ─────────────────────────────────────────────────────────────────────────────
 function StrategyInfoSection({
   strategy,
@@ -288,26 +366,53 @@ function StrategyInfoSection({
   strategy: StrategyWithRelations
   onUpdate: (s: StrategyWithRelations) => void
 }) {
+  // Estado local para todos los campos editables de la estrategia
   const [name, setName] = useState(strategy.name)
   const [description, setDescription] = useState(strategy.description ?? '')
+  const [maxTrades, setMaxTrades] = useState(strategy.maxTrades)
+  const [tradingHoursStart, setTradingHoursStart] = useState(strategy.tradingHoursStart)
+  const [tradingHoursEnd, setTradingHoursEnd] = useState(strategy.tradingHoursEnd)
+
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [saved, setSaved] = useState(false)
 
-  // Detectamos si hay cambios sin guardar para activar/desactivar el botón
+  // Detectamos si hay cambios sin guardar comparando el estado local con
+  // los valores que vienen de la API (prop strategy).
   const hasChanges =
-    name !== strategy.name || description !== (strategy.description ?? '')
+    name !== strategy.name ||
+    description !== (strategy.description ?? '') ||
+    maxTrades !== strategy.maxTrades ||
+    tradingHoursStart !== strategy.tradingHoursStart ||
+    tradingHoursEnd !== strategy.tradingHoursEnd
 
   async function handleSave() {
     if (!name.trim()) return
+
+    // Validación del rango horario en cliente para dar feedback inmediato
+    // sin necesitar esperar la respuesta del servidor.
+    if (tradingHoursStart >= tradingHoursEnd) {
+      setSaveError('El horario de inicio debe ser anterior al de fin')
+      return
+    }
+
     setSaving(true)
     setSaveError('')
     setSaved(false)
 
+    // Enviamos siempre todos los campos (no solo los que cambiaron) para
+    // simplificar la lógica. El API acepta actualizaciones parciales pero
+    // aquí optamos por enviar el estado completo del formulario.
     const res = await fetch('/api/strategy', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({
+        name,
+        description,
+        maxTrades,
+        tradingHoursStart,
+        tradingHoursEnd,
+      }),
     })
 
     if (!res.ok) {
@@ -326,51 +431,107 @@ function StrategyInfoSection({
   }
 
   return (
-    <section className="bg-white border border-gray-200 rounded-lg p-6">
-      <h2 className="text-base font-semibold text-gray-900 mb-4">
-        Información general
-      </h2>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+    <>
+      {/* ── Tarjeta 1: Información general ──────────────────────────────────── */}
+      <section className="bg-white border border-gray-200 rounded-lg p-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-4">
+          Información general
+        </h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nombre
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descripción <span className="text-gray-400">(opcional)</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Descripción <span className="text-gray-400">(opcional)</span>
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          />
-        </div>
+      </section>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleSave}
-            disabled={!hasChanges || saving || !name.trim()}
-            className="py-1.5 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
-          {saved && (
-            <span className="text-sm text-green-600">¡Guardado correctamente!</span>
-          )}
-          {saveError && (
-            <span className="text-sm text-red-600">{saveError}</span>
-          )}
+      {/* ── Tarjeta 2: Límites operativos + botón de guardado ───────────────── */}
+      <section className="bg-white border border-gray-200 rounded-lg p-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">
+          Límites Operativos
+        </h2>
+        <p className="text-xs text-gray-500 mb-4">
+          Estos límites se aplicarán automáticamente a cada sesión de trading.
+          Definirlos aquí (y no en cada sesión) refuerza la consistencia operativa.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Máximo de operaciones por sesión
+            </label>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={maxTrades}
+              onChange={(e) => setMaxTrades(parseInt(e.target.value, 10))}
+              className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Horario de inicio
+              </label>
+              <input
+                type="time"
+                value={tradingHoursStart}
+                onChange={(e) => setTradingHoursStart(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Horario de fin
+              </label>
+              <input
+                type="time"
+                value={tradingHoursEnd}
+                onChange={(e) => setTradingHoursEnd(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* El botón guarda TODOS los campos (info + límites) en una sola petición */}
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              onClick={handleSave}
+              disabled={!hasChanges || saving || !name.trim()}
+              className="py-1.5 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+            {saved && (
+              <span className="text-sm text-green-600">¡Guardado correctamente!</span>
+            )}
+            {saveError && (
+              <span className="text-sm text-red-600">{saveError}</span>
+            )}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   )
 }
 

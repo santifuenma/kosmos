@@ -57,6 +57,11 @@ export type StrategyWithRelations = {
   userId: string
   name: string
   description: string | null
+  // Límites operativos fijos. Se definen en la estrategia para que sean
+  // consistentes entre sesiones y no se modifiquen por impulso día a día.
+  maxTrades: number
+  tradingHoursStart: string // Formato "HH:mm"
+  tradingHoursEnd: string   // Formato "HH:mm"
   createdAt: string
   updatedAt: string
   conditions: StrategyConditionItem[]
