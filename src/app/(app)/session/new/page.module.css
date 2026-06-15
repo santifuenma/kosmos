@@ -19,7 +19,13 @@
 
 /* ── 1. Layout ─────────────────────────────────────────────────────────── */
 
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .page {
+  animation: pageEnter 0.35s ease-out;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -121,7 +127,6 @@
   display: flex;
   flex-direction: column;
   padding: 8px 14px 10px 14px;
-  overflow: hidden;
 }
 
 .conditionsCard {
@@ -131,7 +136,6 @@
   display: flex;
   flex-direction: column;
   padding: 8px 14px 10px 14px;
-  overflow: hidden;
 }
 
 .cardDivider {

@@ -80,5 +80,18 @@ export async function GET() {
     )
   }
 
-  return NextResponse.json(todaySession)
+  // Última sesión cerrada (para mostrar "Última sesión: Ayer, 24 de mayo…")
+  const previousSession = await prisma.session.findFirst({
+    where: {
+      userId: session.user.id,
+      status: 'CLOSED',
+    },
+    orderBy: { date: 'desc' },
+    select: { date: true },
+  })
+
+  return NextResponse.json({
+    ...todaySession,
+    previousSessionDate: previousSession?.date ?? null,
+  })
 }

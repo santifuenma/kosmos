@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
   const {
     direction,
     result,
+    asset,
     pnlAmount,
     notes,
     violations = {},
@@ -114,6 +115,13 @@ export async function POST(request: NextRequest) {
   if (pnlAmount !== undefined && pnlAmount !== null && typeof pnlAmount !== 'number') {
     return NextResponse.json(
       { error: 'El P&L debe ser un número' },
+      { status: 400 },
+    )
+  }
+
+  if (asset !== undefined && asset !== null && typeof asset !== 'string') {
+    return NextResponse.json(
+      { error: 'El activo debe ser un texto' },
       { status: 400 },
     )
   }
@@ -157,39 +165,49 @@ export async function POST(request: NextRequest) {
   // Usamos el create anidado de Prisma para garantizar que el trade y sus
   // violaciones se crean juntos. Si alguna violación falla, no se crea el trade.
 
-  const trade = await prisma.trade.create({
-    data: {
-      sessionId: todaySession.id,
-      direction,
-      result,
-      pnlAmount: pnlAmount ?? null,
-      notes: typeof notes === 'string' ? notes.trim() || null : null,
-      violations: {
-        create: [
-          // Mapeamos StrategyCondition.id → EntryCondition.id para TradeViolation.
-          // La conditionId que almacenamos es la del catálogo (no el vínculo intermedio)
-          // para que las violaciones sean legibles aunque la estrategia cambie.
-          ...violatedConditionIds.map((strategyConditionId: string) => ({
-            conditionId: activeConditionMap.get(strategyConditionId)!.conditionId,
-            type: 'CONDITION_VIOLATION',
-          })),
-          // Ídem para reglas: mapeamos StrategyRule.id → BehavioralRule.id.
-          ...violatedRuleIds.map((strategyRuleId: string) => ({
-            ruleId: activePerTradeRuleMap.get(strategyRuleId)!.ruleId,
-            type: 'RULE_VIOLATION',
-          })),
-        ],
-      },
-    },
-    include: {
-      violations: {
-        include: {
-          rule: true,
-          condition: true,
+  try {
+    const trade = await prisma.trade.create({
+      data: {
+        sessionId: todaySession.id,
+        direction,
+        result,
+        asset: typeof asset === 'string' ? asset.trim().toUpperCase() || null : null,
+        pnlAmount: pnlAmount ?? null,
+        notes: typeof notes === 'string' ? notes.trim() || null : null,
+        violations: {
+          create: [
+            // Mapeamos StrategyCondition.id → EntryCondition.id para TradeViolation.
+            // La conditionId que almacenamos es la del catálogo (no el vínculo intermedio)
+            // para que las violaciones sean legibles aunque la estrategia cambie.
+            ...violatedConditionIds.map((strategyConditionId: string) => ({
+              conditionId: activeConditionMap.get(strategyConditionId)!.conditionId,
+              type: 'CONDITION_VIOLATION',
+            })),
+            // Ídem para reglas: mapeamos StrategyRule.id → BehavioralRule.id.
+            ...violatedRuleIds.map((strategyRuleId: string) => ({
+              ruleId: activePerTradeRuleMap.get(strategyRuleId)!.ruleId,
+              type: 'RULE_VIOLATION',
+            })),
+          ],
         },
       },
-    },
-  })
+      include: {
+        violations: {
+          include: {
+            rule: true,
+            condition: true,
+          },
+        },
+      },
+    })
 
-  return NextResponse.json(trade, { status: 201 })
+    return NextResponse.json(trade, { status: 201 })
+  } catch (err) {
+    console.error('[POST /api/session/trade] prisma.trade.create failed:', err)
+    const message = err instanceof Error ? err.message : 'Error desconocido al crear el trade'
+    return NextResponse.json(
+      { error: `Error al crear el trade: ${message}` },
+      { status: 500 },
+    )
+  }
 }

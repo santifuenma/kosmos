@@ -27,6 +27,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { EmotionalState, TodayIntention, StrategyWithRelations } from '@/types'
 import { EMOTIONAL_STATE_LABELS } from '@/types'
+import { Tooltip } from '@/components/ui/Tooltip'
 import styles from './page.module.css'
 
 // ── Iconos SVG inline ───────────────────────────────────────────────────────
@@ -130,6 +131,7 @@ export default function SessionNewPage() {
 
   // ── Estado de carga y datos ──────────────────────────────────────────────
   const [loading, setLoading] = useState(true)
+  const [redirecting, setRedirecting] = useState(false)
   const [strategy, setStrategy] = useState<StrategyWithRelations | null>(null)
   const [intention, setIntention] = useState<TodayIntention | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -167,7 +169,15 @@ export default function SessionNewPage() {
 
           // Sesión abierta → ir directo al trading
           if (intentionData.confirmedAt && intentionData.session?.status === 'OPEN') {
+            setRedirecting(true)
             router.replace('/session/active')
+            return
+          }
+
+          // Sesión cerrada → ir directo al detalle de la sesión
+          if (intentionData.confirmedAt && intentionData.session?.status === 'CLOSED') {
+            setRedirecting(true)
+            router.replace(`/session/${intentionData.session.id}`)
             return
           }
 
@@ -231,8 +241,8 @@ export default function SessionNewPage() {
 
   // ── Renders condicionales ───────────────────────────────────────────────
 
-  if (loading) {
-    return <div className={styles.loadingState}>Cargando...</div>
+  if (loading || redirecting) {
+    return <div className={styles.loadingState} />
   }
 
   if (error) {
@@ -248,33 +258,6 @@ export default function SessionNewPage() {
     )
   }
 
-  // Estado 5: sesión cerrada → ya terminó el día
-  const isDoneForToday =
-    intention !== null &&
-    intention.confirmedAt !== null &&
-    intention.session?.status === 'CLOSED'
-
-  if (isDoneForToday && intention?.session) {
-    return (
-      <div className={styles.doneState}>
-        <div className={styles.doneIcon}>✅</div>
-        <div>
-          <h1>Sesión completada</h1>
-          <p className={styles.doneText}>
-            Ya completaste tu sesión de trading de hoy. Descansa y vuelve mañana.
-          </p>
-        </div>
-        <div className={styles.doneActions}>
-          <a href={`/session/${intention.session.id}`} className="ctaBtn ctaBtnPrimary">
-            Ver resultados de hoy
-          </a>
-          <a href="/dashboard" className="ctaBtn ctaBtnSecondary">
-            Ir al Dashboard
-          </a>
-        </div>
-      </div>
-    )
-  }
 
   // ── Datos derivados de la estrategia ──────────────────────────────────
   const activeConditions = strategy?.conditions.filter((c) => c.isActive) ?? []
@@ -304,12 +287,9 @@ export default function SessionNewPage() {
           <div className={styles.strategyInfo}>
             <h3 className={styles.sectionTitle}>
               Tu estrategia
-              <span className="infoWrap">
-                <span className="infoIcon"><InfoIcon /></span>
-                <span className="tooltip">
-                  Estos son los límites y el plan con los que operarás hoy. Vienen directamente de tu estrategia configurada.
-                </span>
-              </span>
+              <Tooltip text="Estos son los límites y el plan con los que operarás hoy. Vienen directamente de tu estrategia configurada.">
+                <InfoIcon />
+              </Tooltip>
             </h3>
 
             <div className={styles.strategyDivider} />
@@ -343,12 +323,9 @@ export default function SessionNewPage() {
             <div className={`innerCard ${styles.rulesCard}`}>
               <h3 className={styles.sectionTitle}>
                 Reglas activas a seguir
-                <span className="infoWrap">
-                  <span className="infoIcon"><InfoIcon /></span>
-                  <span className="tooltip">
-                    Las reglas conductuales que te comprometes a cumplir durante esta sesión. Se evaluarán al cerrarla.
-                  </span>
-                </span>
+                <Tooltip text="Las reglas conductuales que te comprometes a cumplir durante esta sesión. Se evaluarán al cerrarla.">
+                  <InfoIcon />
+                </Tooltip>
               </h3>
 
               <div className={styles.cardDivider} />
@@ -382,12 +359,9 @@ export default function SessionNewPage() {
             <div className={`innerCard ${styles.conditionsCard}`}>
               <h3 className={styles.sectionTitle}>
                 Condiciones activas a seguir
-                <span className="infoWrap">
-                  <span className="infoIcon"><InfoIcon /></span>
-                  <span className="tooltip">
-                    Las condiciones de entrada que deben cumplirse antes de abrir una operación. Violarlas impacta tu ICO.
-                  </span>
-                </span>
+                <Tooltip text="Las condiciones de entrada que deben cumplirse antes de abrir una operación. Violarlas impacta tu ICO.">
+                  <InfoIcon />
+                </Tooltip>
               </h3>
 
               <div className={styles.cardDivider} />
@@ -410,12 +384,9 @@ export default function SessionNewPage() {
         <div className={`innerCard ${styles.emotionSection}`}>
           <h3 className={styles.sectionTitle}>
             Tu estado emocional · ¿Cómo te sientes hoy?
-            <span className="infoWrap">
-              <span className="infoIcon"><InfoIcon /></span>
-              <span className="tooltip">
-                Se correlaciona con tu rendimiento para identificar patrones. Sé honesto — no hay respuesta correcta.
-              </span>
-            </span>
+            <Tooltip text="Se correlaciona con tu rendimiento para identificar patrones. Sé honesto — no hay respuesta correcta.">
+              <InfoIcon />
+            </Tooltip>
           </h3>
 
           <div className={styles.emotionGrid}>
@@ -444,12 +415,9 @@ export default function SessionNewPage() {
         <div className={`innerCard ${styles.notesSection}`}>
           <h3 className={styles.sectionTitle}>
             Notas adicionales opcionales
-            <span className="infoWrap">
-              <span className="infoIcon"><InfoIcon /></span>
-              <span className="tooltip">
-                Plan específico del día, niveles clave o cualquier recordatorio antes de operar.
-              </span>
-            </span>
+            <Tooltip text="Plan específico del día, niveles clave o cualquier recordatorio antes de operar.">
+              <InfoIcon />
+            </Tooltip>
           </h3>
 
           <textarea

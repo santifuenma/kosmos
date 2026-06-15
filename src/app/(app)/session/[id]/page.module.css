@@ -1,0 +1,353 @@
+/* ──���───────────────────────────────────────────────────────────────────────
+   Session Result — estilos locales (CSS Module).
+
+   Primitivas reutilizables (card, innerCard, ctaBtnSecondary) viven
+   como clases globales en globals.css.
+
+   Estructura del archivo:
+     1. Layout        → contenedor de página
+     2. Header        → título + fecha
+     3. Top card      → meta info + ICO + reflexión
+     4. Reflection    → feedback de sesión
+     5. Trades inner  → resumen de trades
+     6. Violations    → desglose de violaciones
+     7. States        → loading / error / unauthorized
+     8. Responsive    → ≤ 900px / ≤ 800px / ≤ 700px
+   ─────────���────────────────────────────────��─────────────────────────────── */
+
+
+/* ── 1. Layout ───────────────────���─────────────────────────────────────── */
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page {
+  animation: pageEnter 0.35s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 14px 14px 0;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  min-width: 381px;
+  overflow-y: auto;
+  overflow-x: clip;
+}
+
+
+/* ── 2. Header ───────────────────────────────���─────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-left: 5px;
+  height: 37.5px;
+  flex-shrink: 0;
+}
+
+.date {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
+  font-size: clamp(15px, 2vw, 17px);
+  color: var(--text-secondary);
+}
+
+
+/* ─��� 3. Top card ───────���──────────────────────────────────���────────────── */
+
+.topCard {
+  margin-top: -5px;
+}
+
+.topCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.metaInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-left: 5px;
+}
+
+.metaLine {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+}
+
+.metaValue {
+  color: var(--text-primary);
+}
+
+.metaIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.backBtn {
+  flex-shrink: 0;
+}
+
+.backBtn svg {
+  margin-top: -2px;
+}
+
+.cardRow {
+  display: flex;
+  gap: 10px;
+}
+
+
+/* ── 4. ICO + Reflection ──────────────────────────────────���───────────── */
+
+.icoInner {
+  flex: 0.7;
+  min-width: 0;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.reflectionInner {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.reflectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 0px;
+}
+
+.reflectionText {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.reflectionHighlight {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+
+/* ── 5. Summary + Trades ──────────────────────────────────────────────── */
+
+.summaryInner {
+  flex: 0.7;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 8px 0;
+}
+
+.tradesInner {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* ── 6. Violations card ───────────────────────────────────────────────── */
+
+.violationsCard {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.violationsGrid {
+  display: flex;
+  gap: 20px;
+  margin-top: 4px;
+  flex: 1;
+  min-height: 0;
+}
+
+.violationsCol {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+
+.violationsColTitle {
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.violationsColDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin-bottom: 4px;
+  margin-right: 5px;
+}
+
+.violationsItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 5px 5px 0;
+  gap: 8px;
+}
+
+.violationsLabel {
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.violationsOkIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--color-success-text);
+}
+
+.violationsBad {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-danger);
+  flex-shrink: 0;
+}
+
+.violationsBadIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--color-danger);
+}
+
+/* Override the global .infoIcon svg size when inside a violations row */
+.violationsItem :global(.infoIcon) svg {
+  width: 16px;
+  height: 16px;
+}
+
+.violationsNaIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+
+/* ── 7. States ────────────────────────────────────────────────────────── */
+
+.loadingState,
+.errorState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  padding: 40px;
+}
+
+.unauthorized {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-danger);
+  padding: 40px;
+}
+
+
+/* ── 8. Responsive ────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .cardRow {
+    flex-direction: column;
+  }
+
+  .icoInner,
+  .reflectionInner,
+  .summaryInner,
+  .tradesInner {
+    flex: 1;
+  }
+
+  .violationsGrid {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 800px) {
+  .page {
+    padding: 10px 14px 14px 12px;
+  }
+
+  .header {
+    margin-left: 50px;
+    flex-direction: column;
+    gap: 5px;
+    align-items: flex-start;
+    line-height: 1;
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    width: 100%;
+    max-width: 100vw;
+    min-width: 0;
+    height: auto;
+    overflow-y: auto;
+    overflow-x: clip;
+    padding: 7px;
+    gap: 8px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    margin-left: 53px;
+    gap: 0;
+    width: calc(100% - 53px);
+    line-height: 1.5;
+  }
+
+  .date {
+    margin-top: -3px;
+  }
+
+  .topCardHeader {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .violationsGrid {
+    flex-direction: column;
+    gap: 16px;
+  }
+}

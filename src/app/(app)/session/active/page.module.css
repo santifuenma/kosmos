@@ -22,7 +22,43 @@
 
 /* ── 1. Layout ─────────────────────────────────────────────────────────── */
 
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes overlayFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes modalPopIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes modalPopOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 0; transform: scale(0.92) translateY(12px); }
+}
+
+@keyframes stepSlideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes stepSlideBack {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 .page {
+  animation: pageEnter 0.35s ease-out;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -47,6 +83,13 @@
   flex-shrink: 0;
 }
 
+.date {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
+  font-size: clamp(15px, 2vw, 17px);
+  color: var(--text-secondary);
+}
+
 
 /* ── 3. Session card ───────────────────────────────────────────────────── */
 
@@ -55,7 +98,8 @@
   flex-direction: column;
   gap: 10px;
   flex-shrink: 0;
-  padding: 14px 18px;
+  margin-top: -5px;
+
 }
 
 .sessionTop {
@@ -69,6 +113,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  margin-left: 5px;
+
 }
 
 .sessionTitleRow {
@@ -82,8 +128,6 @@
 }
 
 .sessionDate {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 300;
   font-size: clamp(14px, 1.3vw, 15px);
   color: var(--text-secondary);
 }
@@ -92,7 +136,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  margin-top: 8px;
+  margin: 8px 0px 0px 5px;
 }
 
 .metaLine {
@@ -120,12 +164,13 @@
 }
 
 .activeDot {
-  width: 9px;
-  height: 9px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--color-success);
   flex-shrink: 0;
   box-shadow: 0 0 6px rgba(83, 228, 110, 0.5);
+  margin-left: 1px;
 }
 
 .activeText {
@@ -136,10 +181,7 @@
   flex-shrink: 0;
 }
 
-.closeSessionBtn svg {
-  width: 14px;
-  height: 14px;
-}
+
 
 
 /* ── 4. Info row ───────────────────────────────────────────────────────── */
@@ -154,14 +196,19 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 12px 16px 10px;
+
 }
 
 .cardSectionTitle {
   display: flex;
   align-items: center;
   gap: 2px;
-  font-weight: 450;
+}
+
+.intentionDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 8px 0 0;
 }
 
 .intentionMeta {
@@ -198,8 +245,9 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   padding: 10px 14px;
-  margin-top: auto;
-  padding-top: 12px;
+  margin-top: 8px;
+  margin-left: -5px;
+  margin-right: -5px;
 }
 
 .tipBar p {
@@ -220,41 +268,35 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 12px 16px;
 }
 
 .statusList {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 12px;
+  gap: 5px;
+  margin-top: 5px;
 }
 
 .statusItem {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  align-items: center;
+  gap: 7px;
 }
 
 .statusNumber {
   font-family: 'Outfit', sans-serif;
-  font-size: clamp(24px, 3vw, 30px);
+  font-size: clamp(17px, 3vw, 17px);
   font-weight: 600;
-  line-height: 1;
+  line-height: 0;
   min-width: 32px;
+  text-align: center;
   color: var(--text-primary);
 }
 
-.statusSuccess {
-  color: var(--color-success);
-}
-
-.statusWarning {
-  color: var(--color-warning);
-}
-
+.statusSuccess,
+.statusWarning,
 .statusDanger {
-  color: var(--color-danger);
+  color: var(--text-primary);
 }
 
 .statusText {
@@ -276,8 +318,8 @@
 .tradesCard {
   display: flex;
   flex-direction: column;
-  flex: 1 0 auto;
-  padding: 14px 18px;
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .tradesHeader {
@@ -289,8 +331,57 @@
 
 .tradesHeaderLeft {
   display: flex;
+  flex-direction: column;
+  margin-left: 5px;
+  gap: 0;
+}
+
+.registerBtn {
+  flex-shrink: 0;
+  width: fit-content !important;
+}
+
+.tradesHeaderTitle {
+  display: flex;
   align-items: center;
   gap: 2px;
+}
+
+.tradesStats {
+  font-weight: 300;
+  font-size: clamp(12px, 1vw, 14px);
+  color: var(--text-secondary);
+}
+
+.pnlBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0px 5px;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+  font-size: clamp(11px, 1vw, 13px);
+  border: 1px solid transparent;
+  vertical-align: middle;
+  line-height: 1.2;
+  margin-bottom: 2.5px;
+}
+
+.pnlPos {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--text-primary);
+}
+
+.pnlNeg {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+  color: var(--text-primary);
+}
+
+.pnlNeutral {
+  background: var(--glass-subtle);
+  border-color: var(--glass-border);
+  color: var(--text-secondary);
 }
 
 .emptyTrades {
@@ -301,37 +392,86 @@
 }
 
 .tableWrap {
-  overflow-x: auto;
-  margin-top: 10px;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  margin-top: 5px !important;
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 0px;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .tradesTable {
   width: 100%;
-  border-collapse: collapse;
+  table-layout: fixed;
 }
 
+.tradesTable th:nth-child(1),
+.tradesTable td:nth-child(1) {
+  width: 14%;
+}
+
+.tradesTable th:nth-child(2),
+.tradesTable td:nth-child(2) {
+  width: 14%;
+}
+
+.tradesTable th:nth-child(3),
+.tradesTable td:nth-child(3) {
+  width: 14%;
+}
+
+.tradesTable th:nth-child(4),
+.tradesTable td:nth-child(4) {
+  width: 14%;
+}
+
+.tradesTable th:nth-child(5),
+.tradesTable td:nth-child(5) {
+  width: 14%;
+}
+
+.tradesTable th:nth-child(6),
+.tradesTable td:nth-child(6) {
+  width: 14%;
+}
+
+
+
 .tradesTable th {
-  text-align: left;
-  padding: 10px 14px;
-  color: var(--text-muted);
   font-family: 'Montserrat', sans-serif;
   font-weight: 400;
   font-size: clamp(12px, 1.3vw, 14px);
+  color: var(--text-primary);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   white-space: nowrap;
+  background: var(--glass-base);
+  padding: 7px 14px;
+
 }
 
 .tradesTable td {
-  padding: 12px 14px;
-  font-family: 'Montserrat', sans-serif;
+  padding: 8px 5px;
   font-size: clamp(13px, 1.3vw, 14px);
   color: var(--text-secondary);
   vertical-align: middle;
+  text-align: center;
+
 }
 
 .tradeRow {
   cursor: pointer;
   transition: background 0.15s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tradeRow:last-child {
+  border-bottom: none;
 }
 
 .tradeRow:hover {
@@ -347,35 +487,48 @@
 
 .dirLong,
 .dirShort {
-  font-weight: 400;
+  font-weight: 300;
   white-space: nowrap;
 }
 
 .resultWin,
 .resultLoss,
-.resultBe,
-.violationBadge,
-.noViolationBadge {
-  display: inline-flex;
+.resultBe {
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 14px;
-  border-radius: var(--radius-pill);
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 500;
-  font-size: clamp(12px, 1.2vw, 13px);
+  width: clamp(45px, 9vw, 75px);
+  margin: 0 auto;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 300;
+  font-size: clamp(12px, 1.2vw, 14px);
+  white-space: nowrap;
+}
+
+.violationBadge,
+.noViolationBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(95px, 16vw, 115px);
+  margin: 0 auto;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 300;
+  font-size: clamp(12px, 1.2vw, 14px);
   white-space: nowrap;
 }
 
 .resultWin {
-  background: rgba(83, 228, 110, 0.22);
-  color: var(--color-success-text);
+  background: var(--color-success-bg);
+  color: white;
   border: 1px solid var(--color-success-border);
 }
 
 .resultLoss {
-  background: rgba(255, 95, 84, 0.22);
-  color: var(--color-danger-text);
+  background: var(--color-danger-bg);
+  color: white;
   border: 1px solid var(--color-danger-border);
 }
 
@@ -386,8 +539,8 @@
 }
 
 .violationBadge {
-  background: rgba(255, 210, 64, 0.22);
-  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  color: white;
   border: 1px solid var(--color-warning-border);
 }
 
@@ -395,43 +548,93 @@
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-disabled);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  font-weight: 400;
+  font-weight: 300;
+}
+
+.pnlPositive,
+.pnlNegative,
+.pnlNeutral {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(80px, 16vw, 125px);
+  margin: 0 auto;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 300;
+  font-size: clamp(12px, 1.2vw, 14px);
+  white-space: nowrap;
 }
 
 .pnlPositive {
-  color: var(--color-success-text);
-  font-weight: 500;
-  white-space: nowrap;
+  background: var(--color-success-bg);
+  color: white;
+  border: 1px solid var(--color-success-border);
 }
 
 .pnlNegative {
-  color: var(--color-danger-text);
-  font-weight: 500;
-  white-space: nowrap;
+  background: var(--color-danger-bg);
+  color: white;
+  border: 1px solid var(--color-danger-border);
 }
 
 .pnlNeutral {
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.expandIcon {
-  color: var(--text-disabled);
-  font-size: 11px;
-  user-select: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 
 /* ── 7. Trade detail ───────────────────────────────────────────────────── */
 
+.tradeDetailOverlay {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 5;
+  /* Fondo casi opaco porque backdrop-filter no atraviesa al padre
+     .tableWrap que también tiene backdrop-filter (stacking context). */
+  background: rgba(20, 18, 35, 0.97);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  padding: 18px 24px 22px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+}
+
+.tradeDetailClose {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.tradeDetailClose:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.tradeDetailClose svg {
+  width: 16px;
+  height: 16px;
+}
+
 .tradeDetail {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-right: 24px;
 }
 
 .tradeNotes {
@@ -441,8 +644,8 @@
 }
 
 .violationsTitle {
-  font-weight: 500;
-  font-size: clamp(12px, 1.3vw, 13px);
+  font-weight: 300;
+  font-size: clamp(12px, 1.3vw, 14px);
   color: var(--text-secondary);
   margin-bottom: 4px;
 }
@@ -451,7 +654,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: clamp(12px, 1.3vw, 13px);
+  font-size: clamp(12px, 1.3vw, 14px);
   color: var(--text-secondary);
 }
 
@@ -485,35 +688,9 @@
   padding: 0 2px;
 }
 
-.closeSessionBtnAlt {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: var(--glass-raised);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius-md);
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 500;
-  font-size: clamp(13px, 1.3vw, 14px);
-  color: var(--text-primary);
-  cursor: pointer;
-  box-shadow: var(--shadow-button);
-  transition: background 0.15s, transform 0.1s;
-  flex-shrink: 0;
-}
-
-.closeSessionBtnAlt:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
-
-.closeSessionBtnAlt:active {
-  transform: scale(0.98);
-}
-
 .btnIcon {
-  width: 16px;
-  height: 16px;
+  width: 23px;
+  height: 23px;
   flex-shrink: 0;
 }
 
@@ -524,6 +701,392 @@
 
 
 /* ── 9. Trade form ─────────────────────────────────────────────────────── */
+
+/* ── Modal panel ───────────────────────────────────────────────────────── */
+
+.tradeModalPanel {
+  width: 100%;
+  max-width: 620px;
+  height: 570px;
+  max-height: 90vh;
+  background: rgba(214, 214, 214, 0.286);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  padding: 18px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  animation: modalPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tradeModalPanelStep1 {
+  gap: 18px;
+}
+
+/* Override del modal panel cuando es el de cierre de sesión:
+   menos contenido → menos altura y ancho. */
+.closeModalPanel {
+  max-width: 520px;
+  height: auto;
+  min-height: 380px;
+  overflow-x: hidden;
+}
+
+.tradeModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.tradeModalTitle {
+  font-weight: 500;
+  text-align: center;
+}
+
+.tradeModalClose {
+  position: absolute;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  color: var(--text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.tradeModalClose:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.tradeModalClose svg {
+  width: 18px;
+  height: 18px;
+}
+
+.tradeModalSubtitle {
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: clamp(13px, 1.3vw, 14px);
+}
+
+.tradeModalDivider {
+  flex-shrink: 0;
+  height: 1px;
+  background: rgba(207, 207, 207, 0.266);
+}
+
+.tradeFormSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.tradeFormSectionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-secondary);
+  font-size: clamp(13px, 1.3vw, 14px);
+  font-weight: 400;
+}
+
+.tradeFormFieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-secondary);
+  font-size: clamp(12px, 1.2vw, 13px);
+  font-weight: 400;
+  margin-bottom: 6px;
+}
+
+/* ── Dirección (paso 1) ────────────────────────────────────────────────── */
+
+.directionGrid {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  width: 100%;
+}
+
+.directionBtn {
+  flex: 0 0 auto;
+  width: clamp(120px, 15vw, 140px);
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(37, 37, 37, 0.307);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.directionBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.directionBtn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.directionBtnLabel {
+  font-weight: 600;
+  font-size: clamp(13px, 1.3vw, 15px);
+}
+
+.directionBtnSublabel {
+  font-weight: 300;
+  font-size: clamp(11px, 1.1vw, 12px);
+  opacity: 0.85;
+}
+
+/* ── Resultado (paso 1) ────────────────────────────────────────────────── */
+
+.resultGrid {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  width: 100%;
+}
+
+.resultBtnLarge {
+  flex: 0 0 auto;
+  width: clamp(120px, 15vw, 140px);
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(37, 37, 37, 0.307);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: clamp(12px, 1.2vw, 14px);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.resultBtnLarge:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.resultBtnLarge svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ── Activo + PnL (paso 1) ─────────────────────────────────────────────── */
+
+.fieldRow {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  margin-top: 15px;
+
+}
+
+.fieldCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tradeFormInput {
+  width: 100%;
+  background: rgba(37, 37, 37, 0.307);
+
+
+}
+
+/* ── Cumplimiento (paso 2) ─────────────────────────────────────────────── */
+
+.cumplimientoRow {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+}
+
+.cumplimientoCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+}
+
+.toggleList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  min-height: 140px;
+  background: rgba(37, 37, 37, 0.307);
+}
+
+/* En el modal de cierre la lista no debe usar todo el ancho del panel,
+   pero sí más que el ancho del contenido. */
+.closeModalPanel .toggleList {
+  width: 70%;
+  max-width: 360px;
+}
+
+/* El botón de confirmar cierre tiene texto largo: ancho auto + sin wrap. */
+.closeModalPanel .tradeModalSubmitBtn {
+  width: auto;
+  padding: 0 24px;
+  white-space: nowrap;
+}
+
+.toggleListEmpty {
+  color: var(--text-disabled);
+  font-style: italic;
+  font-size: clamp(12px, 1.2vw, 13px);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 6px;
+}
+
+.toggle {
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  border-radius: 100px;
+  background: var(--glass-raised);
+  border: 1px solid rgba(255, 255, 255, 0.21);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  padding: 0;
+}
+
+.toggleActive {
+  background: var(--color-success);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid rgba(255, 255, 255, 0);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s;
+}
+
+.toggleThumbOn {
+  transform: translateX(16px);
+}
+
+.toggleRowLabel {
+  flex: 1;
+  font-size: clamp(12px, 1.2vw, 13px);
+  color: var(--text-primary);
+}
+
+.tradeFormTextarea {
+  width: 100%;
+  min-height: 80px;
+  background: rgba(37, 37, 37, 0.307);
+}
+
+/* ── Footer del modal ──────────────────────────────────────────────────── */
+
+.tradeModalFooter {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+}
+
+.tradeModalFooterDouble {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.tradeModalNextBtn,
+.tradeModalBackBtn,
+.tradeModalSubmitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 180px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: clamp(13px, 1.3vw, 14px);
+  color: var(--text-primary);
+  background: var(--glass-raised);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: var(--shadow-button);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.tradeModalNextBtn:hover,
+.tradeModalBackBtn:hover,
+.tradeModalSubmitBtn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.tradeModalNextBtn:active,
+.tradeModalBackBtn:active,
+.tradeModalSubmitBtn:active {
+  transform: scale(0.98);
+}
+
+.tradeModalNextBtn:disabled,
+.tradeModalSubmitBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tradeModalNextBtn svg,
+.tradeModalBackBtn svg,
+.tradeModalSubmitBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+
+/* ── Legacy trade form (inline) — TODO: limpiar si ya no se usa ─────────── */
 
 .tradeForm {
   display: flex;
@@ -547,8 +1110,6 @@
 }
 
 .formLabel {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 400;
   font-size: clamp(13px, 1.3vw, 14px);
   color: var(--text-muted);
 }
@@ -570,21 +1131,19 @@
   gap: 8px;
 }
 
-.btnGrid2 > button,
-.btnGrid3 > button {
+.btnGrid2>button,
+.btnGrid3>button {
   flex: 1;
 }
 
 .dirBtn {
   padding: 10px 16px;
   border-radius: var(--radius-md);
-  font-family: 'Montserrat', sans-serif;
   font-weight: 500;
   font-size: clamp(13px, 1.3vw, 14px);
   color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
 
@@ -608,13 +1167,11 @@
 .resultBtn {
   padding: 10px 16px;
   border-radius: var(--radius-md);
-  font-family: 'Montserrat', sans-serif;
   font-weight: 500;
   font-size: clamp(13px, 1.3vw, 14px);
   color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
 
@@ -641,32 +1198,11 @@
   color: var(--color-warning);
 }
 
-.formInput {
-  font-family: 'Montserrat', sans-serif;
-  font-size: clamp(13px, 1.3vw, 14px);
-  color: var(--text-primary);
-  background: rgba(66, 66, 66, 0.256);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
 .formInput:focus {
   border-color: rgba(255, 255, 255, 0.35);
 }
 
 .formTextarea {
-  font-family: 'Montserrat', sans-serif;
-  font-size: clamp(13px, 1.3vw, 14px);
-  color: var(--text-primary);
-  background: rgba(66, 66, 66, 0.256);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  outline: none;
-  transition: border-color 0.15s;
   min-height: 60px;
 }
 
@@ -689,7 +1225,6 @@
   gap: 10px;
   padding: 10px 14px;
   border-radius: var(--radius-md);
-  cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   text-align: left;
   width: 100%;
@@ -741,14 +1276,11 @@
 
 .checkText {
   flex: 1;
-  font-family: 'Montserrat', sans-serif;
   font-size: clamp(13px, 1.3vw, 14px);
-  font-weight: 400;
   color: var(--text-secondary);
 }
 
 .violatedBadge {
-  font-family: 'Montserrat', sans-serif;
   font-size: 11px;
   font-weight: 600;
   color: var(--color-danger-text);
@@ -771,13 +1303,10 @@
 .cancelBtn {
   padding: 10px 20px;
   border-radius: var(--radius-md);
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 400;
   font-size: clamp(13px, 1.3vw, 14px);
   color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  cursor: pointer;
   transition: background 0.15s;
 }
 
@@ -793,14 +1322,12 @@
 .submitBtn {
   padding: 10px 24px;
   border-radius: var(--radius-md);
-  font-family: 'Montserrat', sans-serif;
   font-weight: 500;
   font-size: clamp(13px, 1.3vw, 14px);
   color: var(--text-primary);
   background: var(--glass-raised);
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: var(--shadow-button);
-  cursor: pointer;
   transition: background 0.15s, transform 0.1s;
 }
 
@@ -835,6 +1362,29 @@
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(8px);
   padding: 20px;
+  animation: overlayFadeIn 0.25s ease-out;
+}
+
+.overlayClosing {
+  animation: overlayFadeOut 0.2s ease-in forwards;
+}
+
+.modalClosing {
+  animation: modalPopOut 0.2s ease-in forwards;
+}
+
+.stepForward {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  animation: stepSlideIn 0.25s ease-out;
+}
+
+.stepBackward {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  animation: stepSlideBack 0.25s ease-out;
 }
 
 .overlayPanel {
@@ -860,13 +1410,9 @@
 .overlaySubtitle {
   color: var(--text-secondary);
   margin-top: 4px;
-  line-height: 1.5;
 }
 
 .overlaySummary {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 400;
-  font-size: clamp(13px, 1.3vw, 14px);
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-md);
@@ -886,7 +1432,6 @@
   gap: 12px;
   padding: 12px 16px;
   border-radius: var(--radius-md);
-  cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   text-align: left;
   width: 100%;
@@ -918,23 +1463,18 @@
 }
 
 .sessionRuleLabel {
-  font-family: 'Montserrat', sans-serif;
   font-weight: 500;
   font-size: clamp(13px, 1.3vw, 14px);
   color: var(--text-primary);
 }
 
 .sessionRuleDesc {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 300;
   font-size: clamp(12px, 1.2vw, 13px);
   color: var(--text-muted);
   line-height: 1.4;
 }
 
 .autoMarkedNote {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 400;
   font-size: clamp(11px, 1vw, 12px);
   color: var(--color-warning);
   margin-top: 2px;
@@ -957,13 +1497,11 @@
 .confirmCloseBtn {
   padding: 10px 24px;
   border-radius: var(--radius-md);
-  font-family: 'Montserrat', sans-serif;
   font-weight: 500;
   font-size: clamp(13px, 1.3vw, 14px);
   color: var(--text-primary);
   background: rgba(255, 95, 84, 0.2);
   border: 1px solid var(--color-danger-border);
-  cursor: pointer;
   transition: background 0.15s, transform 0.1s;
 }
 
@@ -989,9 +1527,6 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 300;
-  font-size: 16px;
   color: var(--text-muted);
   padding: 40px;
 }
@@ -1039,8 +1574,13 @@
     line-height: 1;
   }
 
+  .sessionTitleRow {
+    flex-direction: row;
+
+  }
+
   .sessionTop {
-    flex-direction: column;
+
     gap: 12px;
   }
 
@@ -1048,13 +1588,10 @@
     align-self: flex-start;
   }
 
-  .sessionTitleRow {
-    flex-direction: column;
-    gap: 2px;
-  }
 
-  .tradesTable th:nth-child(3),
-  .tradesTable td:nth-child(3) {
+
+  .tradesTable th:nth-child(2),
+  .tradesTable td:nth-child(2) {
     display: none;
   }
 
@@ -1085,9 +1622,18 @@
     line-height: 1.5;
   }
 
+  .date {
+    margin-top: -3px;
+  }
+
+  .sessionTop {
+    flex-direction: column;
+  }
+
   .sessionCard {
     padding: 10px 12px;
     gap: 8px;
+    margin-top: 16px;
   }
 
   .infoRow {
@@ -1097,13 +1643,22 @@
 
   .tradesCard {
     padding: 10px 12px;
+    flex: 0 0 auto;
+    min-height: auto;
+  }
+
+  .tableWrap {
+    flex: 0 0 auto;
+
   }
 
   .tradesHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+    flex-direction: row;
+    justify-content: space-between;
+
   }
+
+  .ctaBtnSecondary {}
 
   .tradesTable th,
   .tradesTable td {
@@ -1111,16 +1666,32 @@
     font-size: clamp(11px, 1.2vw, 13px);
   }
 
-  .tradesTable th:nth-child(3),
-  .tradesTable td:nth-child(3),
-  .tradesTable th:nth-child(6),
-  .tradesTable td:nth-child(6) {
+  .tradesTable th:nth-child(2),
+  .tradesTable td:nth-child(2),
+  .tradesTable th:nth-child(5),
+  .tradesTable td:nth-child(5) {
     display: none;
   }
 
-  .pageFooter {
-    flex-direction: column;
-    gap: 8px;
+  /* Anchos por columna en móvil — ajusta libremente (suma ≈ 100%) */
+  .tradesTable th:nth-child(1),
+  .tradesTable td:nth-child(1) {
+    width: 18%;
+  }
+
+  .tradesTable th:nth-child(3),
+  .tradesTable td:nth-child(3) {
+    width: 18%;
+  }
+
+  .tradesTable th:nth-child(4),
+  .tradesTable td:nth-child(4) {
+    width: 30%;
+  }
+
+  .tradesTable th:nth-child(6),
+  .tradesTable td:nth-child(6) {
+    width: 34%;
   }
 
   .formActions {
@@ -1138,5 +1709,56 @@
 
   .tradeForm {
     padding: 14px;
+  }
+
+  .tradeModalPanel {
+    padding: 16px;
+    max-height: 95vh;
+    overflow-y: auto;
+  }
+
+  /* Botones de dirección y resultado se reparten el ancho equitativamente
+     dentro de su fila, sin envolver, para que TODO quepa sin scroll. */
+  .directionGrid,
+  .resultGrid {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .directionBtn,
+  .resultBtnLarge {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    height: 70px;
+    padding: 6px 4px;
+  }
+
+  .directionBtnLabel {
+    font-size: 13px;
+  }
+
+  .directionBtnSublabel {
+    font-size: 11px;
+  }
+
+  .resultBtnLarge {
+    font-size: 12px;
+  }
+
+  /* Activo + PnL en fila también en móvil */
+  .fieldRow {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .cumplimientoRow {
+    flex-direction: column;
+  }
+
+  .tradeModalFooterDouble {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
   }
 }
