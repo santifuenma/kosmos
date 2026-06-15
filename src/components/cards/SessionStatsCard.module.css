@@ -1,0 +1,93 @@
+/* ── SessionStatsCard shared styles ───────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 8px 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  margin-top: 2px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.itemDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.10);
+  flex-shrink: 0;
+}
+
+.number {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: clamp(17px, 1.5vw, 19px);
+  min-width: 32px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.numberSuccess { color: var(--text-primary); }
+.numberWarning { color: var(--text-primary); }
+.numberDanger  { color: var(--text-primary); }
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 2px;
+}
+
+.label {
+  color: var(--text-secondary);
+}
+
+.hint {
+  font-size: clamp(12px, 1.2vw, 13px);
+  color: var(--text-muted);
+}
+
+.iconWrap {
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.emotionValue {
+  color: var(--text-primary);
+}
+
+@media (max-width: 700px) {
+  .card {
+    flex: none;
+  }
+
+  .list {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+}

@@ -1,0 +1,388 @@
+/* ── TradesTable shared styles ─────────────────────────────────────────── */
+
+.empty {
+  color: var(--text-disabled);
+  font-style: italic;
+  padding: 20px 0;
+  text-align: center;
+}
+
+/* ── Static variant (session detail) ─────────────────────────────────── */
+
+.staticTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.staticTable th:nth-child(1),
+.staticTable td:nth-child(1) {
+  width: 30px;
+}
+
+/* # */
+
+.staticTable th {
+  font-weight: 400;
+  color: var(--text-muted);
+  padding: 3px 4px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.staticTable td {
+  padding: 4px 4px;
+  color: var(--text-secondary);
+  vertical-align: middle;
+  text-align: center;
+}
+
+.staticRow {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.staticRow:last-child {
+  border-bottom: none;
+}
+
+.staticWrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+
+}
+
+.staticTotalRow td {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 6px;
+  padding-bottom: 2px;
+}
+
+.staticTotalCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.staticTotalLabel {
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: clamp(12px, 1.2vw, 14px);
+}
+
+/* ── Interactive variant (active session) ────────────────────────────── */
+
+/* ── Table wrapper ───────────────────────────────────────────────────── */
+
+.tableWrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  margin-top: 10px;
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 0;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* ── Table ────────────────────────────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.table th:nth-child(1),
+.table td:nth-child(1) {
+  width: 14%;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  width: 14%;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  width: 14%;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+  width: 14%;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+  width: 14%;
+}
+
+.table th:nth-child(6),
+.table td:nth-child(6) {
+  width: 14%;
+}
+
+.table th {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  font-size: clamp(12px, 1.3vw, 14px);
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+  background: var(--glass-base);
+  padding: 7px 14px;
+}
+
+.table td {
+  padding: 8px 5px;
+  font-size: clamp(13px, 1.3vw, 14px);
+  color: var(--text-secondary);
+  vertical-align: middle;
+  text-align: center;
+}
+
+/* ── Row variants ────────────────────────────────────────────────────── */
+
+.tradeRow {
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tradeRow:last-child {
+  border-bottom: none;
+}
+
+.tradeRow:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────── */
+
+.dirLong,
+.dirShort {
+  font-weight: 300;
+  white-space: nowrap;
+}
+
+.resultWin,
+.resultLoss,
+.resultBe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(45px, 9vw, 75px);
+  margin: 0 auto;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 300;
+  font-size: clamp(12px, 1.2vw, 14px);
+  white-space: nowrap;
+}
+
+.violationBadge,
+.noViolationBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(95px, 16vw, 115px);
+  margin: 0 auto;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 300;
+  font-size: clamp(12px, 1.2vw, 14px);
+  white-space: nowrap;
+}
+
+/* Static variant: badges compactos con ancho natural */
+.staticWrap .resultWin,
+.staticWrap .resultLoss,
+.staticWrap .resultBe {
+  padding: 2px 18px;
+  width: fit-content;
+}
+
+.staticWrap .violationBadge,
+.staticWrap .noViolationBadge {
+  padding: 2px 18px;
+  width: fit-content;
+}
+
+.staticWrap .pnlPositive,
+.staticWrap .pnlNegative,
+.staticWrap .pnlNeutral {
+  padding: 2px 10px;
+}
+
+.violationTooltipWrap {
+  display: flex;
+  justify-content: center;
+  margin-left: 0;
+}
+
+.resultWin {
+  background: var(--color-success-bg);
+  color: white;
+  border: 1px solid var(--color-success-border);
+}
+
+.resultLoss {
+  background: var(--color-danger-bg);
+  color: white;
+  border: 1px solid var(--color-danger-border);
+}
+
+.resultBe {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.violationBadge {
+  background: var(--color-warning-bg);
+  color: white;
+  border: 1px solid var(--color-warning-border);
+}
+
+.noViolationBadge {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-disabled);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 300;
+}
+
+.pnlPositive,
+.pnlNegative,
+.pnlNeutral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 300;
+  font-size: clamp(12px, 1.2vw, 14px);
+  white-space: nowrap;
+}
+
+.pnlPositive {
+  background: var(--color-success-bg);
+  color: white;
+  border: 1px solid var(--color-success-border);
+}
+
+.pnlNegative {
+  background: var(--color-danger-bg);
+  color: white;
+  border: 1px solid var(--color-danger-border);
+}
+
+.pnlNeutral {
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Total row ───────────────────────────────────────────────────────── */
+
+.totalRow {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+}
+
+.totalLabel {
+  font-weight: 500;
+  font-size: clamp(14px, 1.3vw, 16px);
+  color: var(--text-secondary);
+}
+
+/* ── Row hover tooltip ───────────────────────────────────────────────── */
+
+.rowTooltip {
+  position: fixed;
+  z-index: 9999;
+  transform: translateX(-50%);
+  background: var(--glass-raised);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  font-size: clamp(11px, 1.1vw, 13px);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* Column label toggle (full / abbreviated) */
+.colFull { display: inline; }
+.colShort { display: none; }
+
+/* ── Static variant responsive ───────────────────────────────────────── */
+
+@media (max-width: 700px) {
+  /* Hide Resultado (col 5) in header and body — keep tfoot (Total: label) visible */
+  .staticTable th:nth-child(5),
+  .staticTable tbody td:nth-child(5) {
+    display: none;
+  }
+
+  .colFull { display: none; }
+  .colShort { display: inline; }
+}
+
+/* ── Interactive variant responsive ──────────────────────────────────── */
+
+@media (max-width: 800px) {
+
+  .table th:nth-child(2),
+  .table td:nth-child(2) {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+
+  .table th,
+  .table td {
+    padding: 10px 8px;
+    font-size: clamp(11px, 1.2vw, 13px);
+  }
+
+  .table th:nth-child(2),
+  .table td:nth-child(2),
+  .table th:nth-child(5),
+  .table td:nth-child(5) {
+    display: none;
+  }
+
+  .table th:nth-child(1),
+  .table td:nth-child(1) {
+    width: 18%;
+  }
+
+  .table th:nth-child(3),
+  .table td:nth-child(3) {
+    width: 18%;
+  }
+
+  .table th:nth-child(4),
+  .table td:nth-child(4) {
+    width: 30%;
+  }
+
+  .table th:nth-child(6),
+  .table td:nth-child(6) {
+    width: 34%;
+  }
+}
