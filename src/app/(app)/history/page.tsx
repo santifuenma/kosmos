@@ -1,464 +1,418 @@
-'use client'
-
-// ─────────────────────────────────────────────────────────────────────────────
-// /history — Página de historial y análisis de evolución disciplinaria.
-//
-// Es el punto de reflexión a largo plazo del flujo de Kosmos:
-//   sesión activa → resultados del día → historial semanal
-//
-// Tres secciones principales:
-//
-//   A. Resumen semanal: ICO de la semana con comparativa vs semana anterior.
-//      Permite ver de un vistazo si la disciplina está mejorando.
-//
-//   B. Gráfico de evolución: línea de ICO semanal en las últimas 8 semanas.
-//      El gráfico premia la consistencia (factor E) además de la media.
-//
-//   C. Retroalimentación: mensajes generados a partir de los datos reales,
-//      no plantillas genéricas. Cada mensaje cita números concretos.
-//
-//   D. Lista de sesiones: historial cronológico con ICO, trades, violaciones
-//      y estado emocional. Clic → /session/[id] para ver el desglose completo.
-// ─────────────────────────────────────────────────────────────────────────────
-
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, ReferenceLine,
-} from 'recharts'
-import type {
-  HistoryResponse,
-  WeeklyHistoryResponse,
-  FeedbackResponse,
-  SessionHistoryItem,
-  WeeklyIcoItem,
-  EmotionalState,
-} from '@/types'
-import { EMOTIONAL_STATE_LABELS } from '@/types'
+import { redirect } from 'next/navigation'
+import { getServerSession, authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { Tooltip } from '@/components/ui/Tooltip'
+import { IcoCard } from '@/components/cards/IcoCard'
+import { MonthlyCalendar } from '@/components/cards/MonthlyCalendar'
+import { InfoIcon } from '@/components/icons'
 import styles from './page.module.css'
+import MonthNavigator from './MonthNavigator'
 
-// Helper: devuelve la clave del módulo CSS según el score ICO
-function icoStyleKey(score: number): 'icoHigh' | 'icoMedium' | 'icoLow' {
-  const pct = score <= 1 ? score * 100 : score
-  if (pct >= 85) return 'icoHigh'
-  if (pct >= 70) return 'icoMedium'
-  return 'icoLow'
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-export default function HistoryPage() {
-  const router = useRouter()
+function countSessionViolations(s: { violations: { id: string }[]; trades: { violations: { id: string }[] }[] }) {
+  return s.violations.length + s.trades.reduce((ts, t) => ts + t.violations.length, 0)
+}
 
-  // ── Estado de los tres bloques de datos ─────────────────────────────────
-  const [weekly, setWeekly]     = useState<WeeklyHistoryResponse | null>(null)
-  const [feedback, setFeedback] = useState<FeedbackResponse | null>(null)
-  const [history, setHistory]   = useState<HistoryResponse | null>(null)
-  const [loading, setLoading]   = useState(true)
-  const [page, setPage]         = useState(1)
-  const [loadingMore, setLoadingMore] = useState(false)
+// ─────────────────────────────────────────────────────────────────────────────
 
-  // ── Carga inicial de los tres endpoints en paralelo ──────────────────────
-  useEffect(() => {
-    async function loadAll() {
-      try {
-        const [weeklyRes, feedbackRes, historyRes] = await Promise.all([
-          fetch('/api/history/weekly?weeks=8'),
-          fetch('/api/history/feedback'),
-          fetch('/api/history?page=1&limit=20'),
-        ])
+type Props = {
+  searchParams: Promise<{ year?: string; month?: string }>
+}
 
-        if (weeklyRes.ok)   setWeekly(await weeklyRes.json())
-        if (feedbackRes.ok) setFeedback(await feedbackRes.json())
-        if (historyRes.ok)  setHistory(await historyRes.json())
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadAll()
-  }, [])
+export default async function HistoryPage({ searchParams }: Props) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) redirect('/login')
 
-  // ── Cargar más sesiones (paginación) ─────────────────────────────────────
-  async function loadMoreSessions() {
-    if (!history || page >= history.totalPages || loadingMore) return
-    setLoadingMore(true)
-    try {
-      const nextPage = page + 1
-      const res = await fetch(`/api/history?page=${nextPage}&limit=20`)
-      if (res.ok) {
-        const data: HistoryResponse = await res.json()
-        setHistory((prev) => prev
-          ? { ...data, sessions: [...prev.sessions, ...data.sessions] }
-          : data
-        )
-        setPage(nextPage)
-      }
-    } finally {
-      setLoadingMore(false)
+  const params = await searchParams
+  const now = new Date()
+  const year = params.year ? parseInt(params.year, 10) : now.getUTCFullYear()
+  const month = params.month ? parseInt(params.month, 10) : now.getUTCMonth() + 1
+
+  const startOfMonth = new Date(Date.UTC(year, month - 1, 1))
+  const startOfNextMonth = new Date(Date.UTC(year, month, 1))
+
+  // ── Available months (for the dropdown) ──────────────────────────────────
+  const allSessionDates = await prisma.session.findMany({
+    where: { userId: session.user.id, status: 'CLOSED' },
+    select: { date: true },
+    orderBy: { date: 'asc' },
+  })
+
+  const seenMonths = new Set<string>()
+  const availableMonths: { year: number; month: number; label: string }[] = []
+  for (const { date } of allSessionDates) {
+    const d = new Date(date)
+    const y = d.getUTCFullYear()
+    const m = d.getUTCMonth() + 1
+    const key = `${y}-${m}`
+    if (!seenMonths.has(key)) {
+      seenMonths.add(key)
+      availableMonths.push({
+        year: y,
+        month: m,
+        label: capitalize(
+          new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('es-ES', {
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'UTC',
+          }),
+        ),
+      })
     }
   }
 
-  // ── Calcular métricas de la semana más reciente con datos ────────────────
-  // Buscamos de derecha a izquierda (semanas más recientes primero).
-  const weeksWithData = weekly?.weeks.filter((w) => w.icoWeekly !== null) ?? []
-  const latestWeek    = weeksWithData[weeksWithData.length - 1] ?? null
-  const prevWeek      = weeksWithData[weeksWithData.length - 2] ?? null
+  // ── Data fetch ────────────────────────────────────────────────────────────
+  const monthSessions = await prisma.session.findMany({
+    where: {
+      userId: session.user.id,
+      status: 'CLOSED',
+      date: { gte: startOfMonth, lt: startOfNextMonth },
+    },
+    select: {
+      id: true,
+      date: true,
+      icoScore: true,
+      createdAt: true,
+      closedAt: true,
+      violations: { select: { id: true, rule: { select: { label: true } } } },
+      trades: {
+        select: {
+          id: true,
+          pnlAmount: true,
+          violations: {
+            select: {
+              id: true,
+              type: true,
+              condition: { select: { label: true } },
+              rule: { select: { label: true } },
+            },
+          },
+        },
+      },
+      intention: {
+        select: { emotionalState: true },
+      },
+    },
+    orderBy: { date: 'asc' },
+  })
 
-  const weekDiff =
-    latestWeek?.icoWeekly != null && prevWeek?.icoWeekly != null
-      ? latestWeek.icoWeekly - prevWeek.icoWeekly
+  // ── Derived values ──────────────────────────────────────────────────────
+  const monthLabel = capitalize(
+    new Date(Date.UTC(year, month - 1, 15)).toLocaleDateString('es-ES', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }),
+  )
+
+  const todayDisplay = capitalize(
+    now.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }),
+  )
+
+  // ICO average
+  const sessionsWithIco = monthSessions.filter((s) => s.icoScore !== null)
+  const monthAvgIco =
+    sessionsWithIco.length > 0
+      ? sessionsWithIco.reduce((sum, s) => sum + (s.icoScore ?? 0), 0) / sessionsWithIco.length
       : null
 
-  // ── Preparar datos para Recharts ─────────────────────────────────────────
-  // Recharts no admite gaps en los datos de una misma línea; para las semanas
-  // sin datos usamos `undefined` en lugar de null: Recharts conectará con
-  // `connectNulls={false}` por defecto y dejará el gap visual.
-  const chartData = weekly?.weeks.map((w) => ({
-    weekLabel:  w.weekLabel,
-    icoWeekly:  w.icoWeekly !== null ? Math.round(w.icoWeekly * 100) : undefined,
-    avgDailyIco: w.avgDailyIco !== null ? Math.round((w.avgDailyIco ?? 0) * 100) : undefined,
-    stability:  w.stability !== null ? Math.round((w.stability ?? 0) * 100) : undefined,
-    sessions:   w.sessionCount,
-    // Guardamos los datos originales para el tooltip
-    _raw: w,
-  })) ?? []
+  // Stats
+  const totalSessions = monthSessions.length
+  const totalViolations = monthSessions.reduce((sum, s) => sum + countSessionViolations(s), 0)
+  const totalPnl = monthSessions.reduce(
+    (sum, s) => sum + s.trades.reduce((ts, t) => ts + (t.pnlAmount ?? 0), 0),
+    0,
+  )
 
-  if (loading) {
-    return (
-      <div className={styles.loadingState}>
-        <p className={styles.loadingText}>Cargando historial...</p>
-      </div>
+  // ── Feedback insights ────────────────────────────────────────────────────
+  const insights: string[] = []
+
+  // 1. Compare with previous month
+  const prevMonthStart = new Date(Date.UTC(year, month - 2, 1))
+  const prevMonthSessions = await prisma.session.findMany({
+    where: {
+      userId: session.user.id,
+      status: 'CLOSED',
+      date: { gte: prevMonthStart, lt: startOfMonth },
+      icoScore: { not: null },
+    },
+    select: { icoScore: true },
+  })
+
+  if (prevMonthSessions.length > 0 && sessionsWithIco.length > 0) {
+    const prevAvg = prevMonthSessions.reduce((s, x) => s + (x.icoScore ?? 0), 0) / prevMonthSessions.length
+    const currentAvg = monthAvgIco!
+    const diff = Math.round((currentAvg - prevAvg) * 100)
+    if (diff > 0) {
+      insights.push(`Mejoraste <strong>+${diff}%</strong> respecto al mes anterior.`)
+    } else if (diff < 0) {
+      insights.push(`Tu ICO bajó <strong>${diff}%</strong> respecto al mes anterior.`)
+    } else {
+      insights.push('Tu ICO se mantuvo igual respecto al mes anterior.')
+    }
+  }
+
+  // 2. Most violated rule/condition
+  const violationCounts = new Map<string, number>()
+  for (const s of monthSessions) {
+    for (const v of s.violations) {
+      const label = v.rule?.label ?? 'Regla desconocida'
+      violationCounts.set(label, (violationCounts.get(label) ?? 0) + 1)
+    }
+    for (const t of s.trades) {
+      for (const v of t.violations) {
+        const label = v.type === 'CONDITION_VIOLATION'
+          ? v.condition?.label ?? 'Condición'
+          : v.rule?.label ?? 'Regla'
+        violationCounts.set(label, (violationCounts.get(label) ?? 0) + 1)
+      }
+    }
+  }
+
+  if (violationCounts.size > 0) {
+    const sorted = Array.from(violationCounts.entries()).sort((a, b) => b[1] - a[1])
+    insights.push(`La regla "<strong>${sorted[0][0]}</strong>" fue la más violada este mes.`)
+  }
+
+  // 3. Day-of-week pattern
+  const dowViolations = [0, 0, 0, 0, 0, 0, 0]
+  const dowSessions = [0, 0, 0, 0, 0, 0, 0]
+  const dayNames = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados']
+
+  for (const s of monthSessions) {
+    const dow = new Date(s.date).getUTCDay()
+    dowSessions[dow]++
+    dowViolations[dow] += countSessionViolations(s)
+  }
+
+  const dowRates = dowViolations.map((v, i) => (dowSessions[i] > 0 ? v / dowSessions[i] : 0))
+  const maxDowRate = Math.max(...dowRates)
+  const maxDowIdx = dowRates.indexOf(maxDowRate)
+
+  if (maxDowRate > 0 && dowSessions[maxDowIdx] >= 2) {
+    insights.push(`<strong>Patrón detectado:</strong> tiendes a violar reglas los <strong>${dayNames[maxDowIdx]}</strong>.`)
+  }
+
+  // 4. Best emotional state
+  const emoIcos = new Map<string, number[]>()
+  for (const s of monthSessions) {
+    if (s.icoScore === null || !s.intention?.emotionalState) continue
+    const state = s.intention.emotionalState
+    const arr = emoIcos.get(state) ?? []
+    arr.push(s.icoScore)
+    emoIcos.set(state, arr)
+  }
+
+  if (emoIcos.size > 1) {
+    let bestState = ''
+    let bestAvg = -1
+    for (const [state, icos] of emoIcos) {
+      const avg = icos.reduce((a, b) => a + b, 0) / icos.length
+      if (avg > bestAvg) { bestAvg = avg; bestState = state }
+    }
+    const stateLabels: Record<string, string> = {
+      NEUTRAL: 'Neutral',
+      ANXIOUS: 'Ansioso',
+      CONFIDENT: 'Confiado',
+      FRUSTRATED: 'Frustrado',
+      TIRED: 'Cansado',
+    }
+    insights.push(`Mejor rendimiento cuando tu estado emocional es <strong>${stateLabels[bestState] ?? bestState}</strong>.`)
+  }
+
+  // 5. ICO ↔ P&L correlation
+  const sessionPnl = (s: typeof monthSessions[number]) =>
+    s.trades.reduce((sum, t) => sum + (t.pnlAmount ?? 0), 0)
+
+  const highIco = monthSessions.filter((s) => s.icoScore !== null && s.icoScore >= 0.80)
+  const lowIco  = monthSessions.filter((s) => s.icoScore !== null && s.icoScore <  0.60)
+
+  if (highIco.length > 0 && lowIco.length > 0) {
+    const highAvg = highIco.reduce((sum, s) => sum + sessionPnl(s), 0) / highIco.length
+    const lowAvg  = lowIco.reduce((sum, s)  => sum + sessionPnl(s), 0) / lowIco.length
+    const fmt = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}$`
+    const highVerb = highAvg >= 0 ? 'ganaste' : 'perdiste'
+    const lowVerb  = lowAvg  >= 0 ? 'ganaste' : 'perdiste'
+    insights.push(
+      `Cuando fuiste disciplinado (ICO ≥ 80) <strong>${highVerb} ${fmt(highAvg)}</strong> de media.` +
+      ` Cuando no (ICO &lt; 60), <strong>${lowVerb} ${fmt(lowAvg)}</strong>.`
     )
   }
 
-  const hasAnySessions = (history?.total ?? 0) > 0
+  // 6. Talón de Aquiles multi-mes
+  const twoMonthsAgoStart = new Date(Date.UTC(year, month - 3, 1))
+  const prevTwoMonthsSessions = await prisma.session.findMany({
+    where: {
+      userId: session.user.id,
+      status: 'CLOSED',
+      date: { gte: twoMonthsAgoStart, lt: startOfMonth },
+    },
+    select: {
+      date: true,
+      violations: { select: { rule: { select: { label: true } } } },
+      trades: {
+        select: {
+          violations: {
+            select: {
+              type: true,
+              rule: { select: { label: true } },
+            },
+          },
+        },
+      },
+    },
+  })
 
-  // ── Estado vacío ─────────────────────────────────────────────────────────
-  if (!hasAnySessions) {
-    return (
-      <div className={styles.emptyState}>
-        <p className={styles.emptyIcon}>📊</p>
-        <h2 className={styles.emptyHeading}>
-          Aún no tienes sesiones registradas
-        </h2>
-        <p className={styles.emptyText}>
-          Inicia tu primera sesión desde el Dashboard para empezar a medir
-          tu disciplina operativa y ver tu evolución aquí.
-        </p>
-        <Link href="/dashboard" className={styles.emptyCta}>
-          Ir al Dashboard
-        </Link>
-      </div>
-    )
+  // Build a map: "year-month" → Set<ruleLabel>
+  const rulesByMonth = new Map<string, Set<string>>()
+
+  const addRules = (date: Date | string, violations: { rule: { label: string } | null }[], tradeViolations: { type: string; rule: { label: string } | null }[][]) => {
+    const d = new Date(date)
+    const key = `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`
+    if (!rulesByMonth.has(key)) rulesByMonth.set(key, new Set())
+    const set = rulesByMonth.get(key)!
+    for (const v of violations) if (v.rule?.label) set.add(v.rule.label)
+    for (const tvs of tradeViolations) for (const v of tvs) if (v.type === 'RULE_VIOLATION' && v.rule?.label) set.add(v.rule.label)
+  }
+
+  for (const s of prevTwoMonthsSessions) addRules(s.date, s.violations, s.trades.map((t) => t.violations))
+  for (const s of monthSessions)          addRules(s.date, s.violations, s.trades.map((t) => t.violations))
+
+  if (rulesByMonth.size >= 3) {
+    const monthSets = Array.from(rulesByMonth.values())
+    const recurring = Array.from(monthSets[0]).filter((rule) => monthSets.every((set) => set.has(rule)))
+    if (recurring.length > 0) {
+      insights.push(
+        `Llevas <strong>${rulesByMonth.size} meses seguidos</strong> violando` +
+        ` "<strong>${recurring[0]}</strong>". Es tu patrón de indisciplina más persistente.`
+      )
+    }
+  }
+
+  // ── Calendar data ──────────────────────────────────────────────────────
+  const sessionsByDate = new Map<number, { id: string; icoScore: number | null }>()
+  for (const s of monthSessions) {
+    sessionsByDate.set(new Date(s.date).getUTCDate(), { id: s.id, icoScore: s.icoScore })
   }
 
   return (
     <div className={styles.page}>
 
-      {/* ── Cabecera ─────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className={styles.header}>
-        <h1 className={styles.heading}>Historial</h1>
-        <p className={styles.subheading}>
-          Evolución de tu disciplina operativa a lo largo del tiempo.
-        </p>
+        <h1>Historial</h1>
+        <span className={styles.date}>{todayDisplay}</span>
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════════
-          A. RESUMEN SEMANAL
-          ════════════════════════════════════════════════════════════════════ */}
-      {latestWeek && (
-        <section className={styles.summaryCard}>
-          <div className={styles.summaryTop}>
-            <div>
-              <p className={styles.summaryLabel}>
-                {latestWeek.weekLabel} · ICO semanal
-              </p>
-              <div className={styles.summaryScore}>
-                <span className={styles[icoStyleKey(latestWeek.icoWeekly ?? 0)]}>
-                  {Math.round((latestWeek.icoWeekly ?? 0) * 100)}%
-                </span>
-                {/* Comparativa con semana anterior */}
-                {weekDiff !== null && (
-                  <span className={weekDiff >= 0 ? styles.diffPositive : styles.diffNegative}>
-                    {weekDiff >= 0 ? '▲' : '▼'} {Math.round(Math.abs(weekDiff) * 100)}%
-                  </span>
-                )}
+      {/* ── Big history card: month bar + top row + calendar ───────────── */}
+      <div className={`card ${styles.historyCard}`}>
+
+        {/* ── Month bar ─────────────────────────────────────────────────── */}
+        <div className={styles.monthBar}>
+          <div className={styles.monthBarLeft}>
+            <h3 className={styles.monthBarTitle}>
+              Resumen Mensual
+              <Tooltip text="Resumen general de tu rendimiento en el mes seleccionado: ICO promedio, estadísticas clave y retroalimentación basada en tus datos.">
+                <InfoIcon />
+              </Tooltip>
+            </h3>
+          </div>
+          <MonthNavigator year={year} month={month} monthLabel={monthLabel} availableMonths={availableMonths} />
+        </div>
+
+        {/* ── Content that transitions on month change ─────────────────── */}
+        <div key={`${year}-${month}`} className={styles.monthContent}>
+
+          {/* ── Top row: ICO + Stats | Feedback ──────────────────────────── */}
+          <div className={styles.topRow}>
+
+            {/* Left column: ICO ring + Stats */}
+            <div className={styles.icoCol}>
+              <IcoCard
+                score={monthAvgIco}
+                title="ICO promedio del mes"
+                tooltipText="Promedio del Índice de Coherencia Operativa de todas las sesiones cerradas en este mes. Mide tu disciplina operativa general."
+                dateLabel={monthLabel}
+              />
+
+              <div className={`innerCard ${styles.statsInner}`}>
+                <h3 className={styles.statsTitle}>
+                  Estadísticas del mes
+                  <Tooltip text="Resumen numérico del mes: sesiones completadas, violaciones totales acumuladas y resultado financiero neto.">
+                    <InfoIcon />
+                  </Tooltip>
+                </h3>
+
+                <div className={styles.statsRow}>
+                  <div className={styles.statItem}>
+                    <p className={styles.statValue}>{totalSessions}</p>
+                    <p className={styles.statLabel}>Sesiones</p>
+                  </div>
+                  <div className={styles.statItem}>
+                    <p className={styles.statValue}>{totalViolations}</p>
+                    <p className={styles.statLabel}>Violaciones</p>
+                  </div>
+                  <div className={styles.statItem}>
+                    <span className={`${styles.pnlBadge} ${totalPnl > 0 ? styles.pnlBadgeSuccess : totalPnl < 0 ? styles.pnlBadgeDanger : styles.pnlBadgeNeutral}`}>
+                      {totalPnl > 0 ? '+' : ''}{totalPnl.toFixed(2)}
+                    </span>
+                    <p className={styles.statLabel}>P&L</p>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* Right column: Feedback */}
+            <div className={styles.feedbackCol}>
+              <div className={`innerCard ${styles.feedbackInner}`}>
+                <h3 className={styles.feedbackTitle}>
+                  Retroalimentación del mes
+                  <Tooltip text="Análisis automático generado a partir de tus datos del mes. Incluye comparación con el mes anterior, patrones de violaciones y correlación con tu estado emocional.">
+                    <InfoIcon />
+                  </Tooltip>
+                </h3>
+                <div className={styles.statsDivider} />
+                <div className={styles.feedbackBody}>
+                  {insights.length > 0 ? (
+                    insights.flatMap((text, i) => [
+                      i > 0 ? <div key={`div-${i}`} className={styles.feedbackDivider} /> : null,
+                      <p key={i} className={styles.feedbackText} dangerouslySetInnerHTML={{ __html: text }} />,
+                    ]).filter(Boolean)
+                  ) : (
+                    <p className={styles.emptyFeedback}>
+                      {totalSessions === 0
+                        ? 'No hay sesiones registradas en este mes.'
+                        : 'No hay suficientes datos para generar insights.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* Barra de progreso del ICO semanal */}
-          <div className={styles.progressBar}>
-            <div
-              className={styles[icoStyleKey(latestWeek.icoWeekly ?? 0) === 'icoHigh' ? 'progressFill' : icoStyleKey(latestWeek.icoWeekly ?? 0) === 'icoMedium' ? 'progressFillMedium' : 'progressFillLow']}
-              style={{ width: `${Math.round((latestWeek.icoWeekly ?? 0) * 100)}%` }}
+          {/* ── Calendar ────────────────────────────────────────────────── */}
+          <div className={`innerCard ${styles.calendarCard}`}>
+            <MonthlyCalendar
+              year={year}
+              month={month}
+              sessionsByDate={sessionsByDate}
             />
           </div>
 
-          {/* Mini-indicadores: sesiones, media diaria, estabilidad */}
-          <div className={styles.miniStats}>
-            <div className={styles.miniStat}>
-              <p className={styles.miniStatValue}>{latestWeek.sessionCount}</p>
-              <p className={styles.miniStatLabel}>Sesiones</p>
-            </div>
-            <div className={styles.miniStat}>
-              <p className={styles.miniStatValue}>
-                {Math.round((latestWeek.avgDailyIco ?? 0) * 100)}%
-              </p>
-              <p className={styles.miniStatLabel}>Media diaria</p>
-            </div>
-            <div className={styles.miniStat}>
-              <p className={styles.miniStatValue}>
-                {Math.round((latestWeek.stability ?? 0) * 100)}%
-              </p>
-              <p className={styles.miniStatLabel}>Estabilidad</p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ════════════════════════════════════════════════════════════════════
-          B. GRÁFICO DE EVOLUCIÓN SEMANAL
-          ════════════════════════════════════════════════════════════════════ */}
-      {weekly && weeksWithData.length > 0 && (
-        <section className={styles.chartCard}>
-          <h2 className={styles.chartTitle}>
-            Evolución del ICO semanal
-          </h2>
-
-          <div className={styles.chartWrapper}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-
-                <XAxis
-                  dataKey="weekLabel"
-                  tick={{ fill: '#71717a', fontSize: 11 }}
-                  axisLine={{ stroke: '#3f3f46' }}
-                  tickLine={false}
-                />
-
-                <YAxis
-                  domain={[0, 100]}
-                  tick={{ fill: '#71717a', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => `${v}%`}
-                />
-
-                {/* Líneas de referencia de umbrales cualitativos */}
-                <ReferenceLine y={85} stroke="#10b981" strokeDasharray="4 4" strokeOpacity={0.4} />
-                <ReferenceLine y={70} stroke="#f59e0b" strokeDasharray="4 4" strokeOpacity={0.4} />
-
-                <Tooltip content={<WeeklyTooltip />} />
-
-                <Line
-                  type="monotone"
-                  dataKey="icoWeekly"
-                  stroke="#6366f1"
-                  strokeWidth={2.5}
-                  dot={{ fill: '#6366f1', r: 4, strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: '#818cf8' }}
-                  connectNulls={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Leyenda de umbrales */}
-          <div className={styles.chartLegend}>
-            <span className={styles.legendItem}>
-              <span className={styles.legendLineGreen} />
-              Alta coherencia ≥ 85%
-            </span>
-            <span className={styles.legendItem}>
-              <span className={styles.legendLineAmber} />
-              Coherencia moderada ≥ 70%
-            </span>
-          </div>
-        </section>
-      )}
-
-      {/* ════════════════════════════════════════════════════════════════════
-          C. RETROALIMENTACIÓN SEMANAL
-          ════════════════════════════════════════════════════════════════════ */}
-      <section className={styles.feedbackSection}>
-        <h2 className={styles.sectionLabel}>
-          Retroalimentación
-        </h2>
-
-        {feedback && feedback.messages.length > 0 ? (
-          <div className={styles.feedbackList}>
-            {feedback.messages.map((msg, i) => (
-              <FeedbackCard key={i} type={msg.type as 'positive' | 'neutral' | 'warning' | 'info'} text={msg.text} />
-            ))}
-          </div>
-        ) : (
-          <div className={styles.feedbackEmpty}>
-            <p className={styles.feedbackEmptyText}>
-              Necesitas más sesiones para generar retroalimentación.
-              ¡Sigue operando con disciplina!
-            </p>
-          </div>
-        )}
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          D. LISTA DE SESIONES
-          ════════════════════════════════════════════════════════════════════ */}
-      <section className={styles.sessionsSection}>
-        <div className={styles.sessionsSectionHeader}>
-          <h2 className={styles.sectionLabel}>
-            Sesiones pasadas
-          </h2>
-          {history && (
-            <span className={styles.sessionCount}>{history.total} en total</span>
-          )}
-        </div>
-
-        {history && history.sessions.length > 0 ? (
-          <>
-            <div className={styles.sessionList}>
-              {history.sessions.map((s) => (
-                <SessionRow
-                  key={s.id}
-                  session={s}
-                  onClick={() => router.push(`/session/${s.id}`)}
-                />
-              ))}
-            </div>
-
-            {/* Botón "cargar más" si hay más páginas */}
-            {page < (history.totalPages ?? 1) && (
-              <button
-                onClick={loadMoreSessions}
-                disabled={loadingMore}
-                className={styles.loadMoreBtn}
-              >
-                {loadingMore ? 'Cargando...' : 'Cargar más sesiones'}
-              </button>
-            )}
-          </>
-        ) : (
-          <p className={styles.noSessions}>
-            No hay sesiones cerradas en el historial.
-          </p>
-        )}
-      </section>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// WeeklyTooltip — Tooltip personalizado del gráfico de Recharts.
-// Recharts pasa el array `payload` con los datos del punto activo.
-// ─────────────────────────────────────────────────────────────────────────────
-
-function WeeklyTooltip({ active, payload }: {
-  active?: boolean
-  payload?: { payload: { icoWeekly?: number; sessions: number; avgDailyIco?: number; stability?: number; _raw: WeeklyIcoItem } }[]
-}) {
-  if (!active || !payload?.length) return null
-  const d = payload[0].payload
-  if (d.icoWeekly == null) return null
-  const raw = d._raw
-
-  return (
-    <div className={styles.tooltip}>
-      <p className={styles.tooltipTitle}>{raw.weekLabel}</p>
-      <p className={styles.tooltipIco}>ICO semanal: {d.icoWeekly}%</p>
-      <p className={styles.tooltipDetail}>Media diaria: {d.avgDailyIco}%</p>
-      <p className={styles.tooltipDetail}>Estabilidad: {d.stability}%</p>
-      <p className={styles.tooltipSessions}>{d.sessions} {d.sessions === 1 ? 'sesión' : 'sesiones'}</p>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FeedbackCard — Mensaje de retroalimentación con icono y color según tipo.
-// El borde lateral de color permite identificar visualmente el tono del mensaje
-// sin necesidad de leer el texto completo.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const FEEDBACK_ICONS: Record<string, string> = {
-  positive: '✅',
-  neutral:  '📊',
-  warning:  '⚠️',
-  info:     'ℹ️',
-}
-
-const FEEDBACK_TYPE_CLASSES: Record<string, keyof typeof styles> = {
-  positive: 'feedbackPositive',
-  neutral:  'feedbackNeutral',
-  warning:  'feedbackWarning',
-  info:     'feedbackInfo',
-}
-
-function FeedbackCard({ type, text }: { type: 'positive' | 'neutral' | 'warning' | 'info'; text: string }) {
-  const icon = FEEDBACK_ICONS[type] ?? FEEDBACK_ICONS.info
-  const typeClass = FEEDBACK_TYPE_CLASSES[type] ?? FEEDBACK_TYPE_CLASSES.info
-  return (
-    <div className={`${styles.feedbackCard} ${styles[typeClass as string]}`}>
-      <span className={styles.feedbackIcon}>{icon}</span>
-      <p className={styles.feedbackText}>{text}</p>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SessionRow — Fila del historial de sesiones.
-// Diseñada para ser escaneada rápidamente: el color del ICO es el indicador
-// visual primario. El emoji de estado emocional da contexto sin texto extra.
-// ─────────────────────────────────────────────────────────────────────────────
-
-function SessionRow({ session, onClick }: { session: SessionHistoryItem; onClick: () => void }) {
-  const emotionInfo = EMOTIONAL_STATE_LABELS[session.emotionalState as EmotionalState]
-  const icoPercent  = session.icoScore !== null ? Math.round(session.icoScore * 100) : null
-
-  return (
-    <button onClick={onClick} className={styles.sessionRow}>
-      {/* ICO del día como indicador visual principal */}
-      <div className={styles.sessionIco}>
-        {icoPercent !== null ? (
-          <span className={styles[icoStyleKey(session.icoScore ?? 0)]}>
-            {icoPercent}%
-          </span>
-        ) : (
-          <span className={styles.sessionIcoEmpty}>—</span>
-        )}
-      </div>
-
-      {/* Fecha */}
-      <div className={styles.sessionInfo}>
-        <p className={styles.sessionDate}>
-          {new Date(session.date).toLocaleDateString('es-ES', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'UTC',
-          })}
-        </p>
-        {/* Métricas secundarias */}
-        <div className={styles.sessionMeta}>
-          <span>{session.tradeCount} {session.tradeCount === 1 ? 'trade' : 'trades'}</span>
-          {session.violationCount > 0 && (
-            <span className={styles.violationBadge}>{session.violationCount} {session.violationCount === 1 ? 'violación' : 'violaciones'}</span>
-          )}
-          {session.pnlTotal !== null && (
-            <span className={session.pnlTotal >= 0 ? styles.pnlPositive : styles.pnlNegative}>
-              {session.pnlTotal >= 0 ? '+' : ''}{session.pnlTotal.toFixed(2)}
-            </span>
-          )}
         </div>
       </div>
-
-      {/* Estado emocional */}
-      <div className={styles.sessionEmotion}>
-        <span title={emotionInfo.label}>{emotionInfo.emoji}</span>
-      </div>
-
-      <span className={styles.sessionArrow}>→</span>
-    </button>
+    </div>
   )
 }
