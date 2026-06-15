@@ -45,3 +45,6 @@ next-env.d.ts
 # Prisma
 prisma/*.db
 prisma/*.db-journal
+
+# Claude Code local config and worktree metadata
+.claude/
