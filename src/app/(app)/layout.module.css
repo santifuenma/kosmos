@@ -1,0 +1,33 @@
+/* App shell: sidebar fixed on the left, content fills the rest */
+
+.appLayout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  min-width: 0;
+}
+
+.main {
+  margin-left: 280px;
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  transition: margin-left 0.35s ease;
+}
+
+@media (max-width: 1220px) {
+  .main {
+    margin-left: 110px;
+  }
+}
+
+@media (max-width: 800px) {
+  .main {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100vw;
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+}

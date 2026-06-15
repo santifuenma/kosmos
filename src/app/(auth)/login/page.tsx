@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import styles from './page.module.css'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -52,13 +53,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Iniciar Sesión</h1>
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.heading}>Iniciar Sesión</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <label className={styles.label}>
               Email
             </label>
             <input
@@ -66,13 +67,13 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.input}
               placeholder="tu@email.com"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={styles.field}>
+            <label className={styles.label}>
               Contraseña
             </label>
             <input
@@ -80,28 +81,28 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.input}
               placeholder="••••••"
             />
           </div>
 
           {/* Mostramos el error solo cuando existe, sin reservar espacio vacío */}
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className={styles.errorText}>{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={styles.submitBtn}
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-center text-gray-600">
+        <p className={styles.footerText}>
           ¿No tienes cuenta?{' '}
-          <Link href="/register" className="text-blue-600 hover:underline">
+          <Link href="/register" className={styles.footerLink}>
             Regístrate
           </Link>
         </p>

@@ -1,28 +1,90 @@
+// Página de Estrategia — permite crear, ver y editar la estrategia de trading.
+//
+// Estructura de componentes:
+//   StrategyPage          → controlador principal: fetch + routing por estado
+//   ├─ LoadingView        → spinner mientras carga
+//   ├─ ErrorView          → mensaje de error
+//   ├─ CreateStrategyForm → formulario de creación (si no existe estrategia)
+//   └─ ManageStrategyView → vista principal cuando ya existe
+//       ├─ StrategyReadMode  → lectura (info + límites + botón editar)
+//       ├─ StrategyEditMode  → edición inline (inputs + guardar/cancelar)
+//       ├─ RuleRow[]         → filas de reglas conductuales con toggle
+//       └─ ConditionRow[]    → filas de condiciones de entrada con toggle
+
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { StrategyWithRelations, StrategyConditionItem, StrategyRuleItem } from '@/types'
+import styles from './page.module.css'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StrategyPage — gestión completa de la estrategia operativa del trader.
-//
-// Es un Client Component porque necesita:
-//  - Fetch en mount para cargar la estrategia
-//  - Estado local para el formulario de edición
-//  - Optimistic updates en los toggles (cambia UI antes de recibir respuesta)
-//
-// La página tiene dos estados excluyentes:
-//  A) Sin estrategia → formulario de creación
-//  B) Con estrategia → vista de gestión con edición de campos, toggles, etc.
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Iconos SVG inline (lápiz, check, X) ─────────────────────────────────────
+// Se definen aquí para no depender de una librería de iconos externa.
+
+function EditIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 20h4l10.5-10.5a2.121 2.121 0 0 0-3-3L5 17v3" />
+      <path d="M13.5 6.5l3 3" />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
+function CancelIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
+function InfoIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+      <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.1" />
+      <line x1="7.5" y1="6.5" x2="7.5" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <circle cx="7.5" cy="4.5" r="0.8" fill="currentColor" />
+    </svg>
+  )
+}
+
+// ── Helpers de formato de fecha ──────────────────────────────────────────────
+// formatCreatedDate → "18 de mayo de 2026" (para la fecha de creación)
+// getTodayDisplay   → "Domingo, 18 de mayo de 2026" (para el header)
+
+function formatCreatedDate(dateStr: string | Date): string {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
+function getTodayDisplay(): string {
+  const now = new Date()
+  const raw = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
+}
+
+// ── StrategyPage ─────────────────────────────────────────────────────────────
+// Componente principal de la página. Hace el fetch a GET /api/strategy y
+// decide qué mostrar según el resultado:
+//   - 404 (null)  → CreateStrategyForm   (el usuario aún no tiene estrategia)
+//   - 200 (data)  → ManageStrategyView   (ya tiene estrategia, puede verla/editarla)
+//   - error       → ErrorView
+// El state "strategy" es la fuente de verdad; los hijos la actualizan
+// vía onCreated / onUpdate para que todo se re-renderice sin refetch.
 
 export default function StrategyPage() {
   const [strategy, setStrategy] = useState<StrategyWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Cargamos la estrategia al montar el componente.
-  // Si recibimos 404 no es un error: el usuario simplemente no tiene estrategia todavía.
   useEffect(() => {
     fetch('/api/strategy')
       .then(async (res) => {
@@ -45,32 +107,23 @@ export default function StrategyPage() {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// LoadingView — estado de carga inicial
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Loading / Error ──────────────────────────────────────────────────────────
+// Vistas mínimas para los estados de carga y error.
+
 function LoadingView() {
-  return (
-    <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
-      Cargando estrategia...
-    </div>
-  )
+  return <div className={styles.loadingState}>Cargando estrategia...</div>
 }
 
 function ErrorView({ message }: { message: string }) {
-  return (
-    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
-      {message}
-    </div>
-  )
+  return <div className={styles.errorState}>{message}</div>
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CreateStrategyForm — formulario para el primer acceso (sin estrategia).
-//
-// Incluye los límites operativos con sus valores por defecto ya rellenados
-// para que el trader los vea desde el primer momento y entienda que forman
-// parte de la estrategia, no de la intención diaria.
-// ─────────────────────────────────────────────────────────────────────────────
+// ── CreateStrategyForm ───────────────────────────────────────────────────────
+// Formulario que aparece solo si el usuario no tiene estrategia (404).
+// Campos: nombre, descripción (opcional), maxTrades, horario inicio/fin.
+// Al hacer POST /api/strategy con éxito, llama a onCreated para pasar
+// directamente a ManageStrategyView sin recargar.
+
 function CreateStrategyForm({
   onCreated,
 }: {
@@ -78,7 +131,6 @@ function CreateStrategyForm({
 }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  // Defaults alineados con los @default del schema de Prisma
   const [maxTrades, setMaxTrades] = useState(3)
   const [tradingHoursStart, setTradingHoursStart] = useState('09:00')
   const [tradingHoursEnd, setTradingHoursEnd] = useState('11:30')
@@ -89,7 +141,6 @@ function CreateStrategyForm({
     e.preventDefault()
     setError('')
 
-    // Validación del rango horario en cliente para feedback inmediato
     if (tradingHoursStart >= tradingHoursEnd) {
       setError('El horario de inicio debe ser anterior al de fin')
       return
@@ -100,13 +151,7 @@ function CreateStrategyForm({
     const res = await fetch('/api/strategy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        description,
-        maxTrades,
-        tradingHoursStart,
-        tradingHoursEnd,
-      }),
+      body: JSON.stringify({ name, description, maxTrades, tradingHoursStart, tradingHoursEnd }),
     })
 
     if (!res.ok) {
@@ -116,114 +161,113 @@ function CreateStrategyForm({
       return
     }
 
-    // Al recibir la estrategia creada (con todas sus condiciones y reglas)
-    // actualizamos el estado del padre para pasar a la vista de gestión.
     const created: StrategyWithRelations = await res.json()
     onCreated(created)
   }
 
   return (
-    <div className="max-w-lg">
-      <h1 className="text-2xl font-bold text-gray-900">Crea tu estrategia</h1>
-      <p className="mt-2 text-sm text-gray-500">
-        La estrategia define tu plan de trading. Después de crearla podrás
-        activar las condiciones de entrada y reglas conductuales que sigues.
-      </p>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <h1>Estrategia</h1>
+      </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre de la estrategia
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder="Ej: Momentum en apertura NY"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+      <div className={`card ${styles.createForm}`}>
+        <h3 className={styles.createHeading}>Crea tu estrategia</h3>
+        <p className={styles.createSubheading}>
+          La estrategia define tu plan de trading. Después de crearla podrás
+          activar las condiciones de entrada y reglas conductuales que sigues.
+        </p>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Descripción <span className="text-gray-400">(opcional)</span>
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            placeholder="Describe brevemente tu enfoque operativo..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          />
-        </div>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <label className={styles.label}>Nombre de la estrategia</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="Ej: Momentum en apertura NY"
+              className={styles.input}
+            />
+          </div>
 
-        {/* Separador visual para los límites operativos */}
-        <div className="pt-2 border-t border-gray-200">
-          <p className="text-sm font-medium text-gray-700 mb-3">Límites operativos</p>
+          <div className={styles.field}>
+            <label className={styles.label}>
+              Descripción <span className={styles.optional}>(opcional)</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="Describe brevemente tu enfoque operativo..."
+              className={styles.textarea}
+            />
+          </div>
 
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Máximo de operaciones por sesión
-              </label>
-              <input
-                type="number"
-                min={1}
-                step={1}
-                value={maxTrades}
-                onChange={(e) => setMaxTrades(parseInt(e.target.value, 10))}
-                required
-                className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+          <div className={styles.limitsSection}>
+            <h3 className={styles.limitsSectionTitle}>Límites operativos</h3>
 
-            <div className="flex gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Hora de inicio
-                </label>
+            <div className={styles.limitsFields}>
+              <div className={styles.field}>
+                <label className={styles.label}>Máximo de operaciones por sesión</label>
                 <input
-                  type="time"
-                  value={tradingHoursStart}
-                  onChange={(e) => setTradingHoursStart(e.target.value)}
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={maxTrades}
+                  onChange={(e) => setMaxTrades(parseInt(e.target.value, 10))}
                   required
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={styles.inputSmall}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Hora de fin
-                </label>
-                <input
-                  type="time"
-                  value={tradingHoursEnd}
-                  onChange={(e) => setTradingHoursEnd(e.target.value)}
-                  required
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+
+              <div className={styles.timeRow}>
+                <div className={styles.field}>
+                  <label className={styles.label}>Hora de inicio</label>
+                  <input
+                    type="time"
+                    value={tradingHoursStart}
+                    onChange={(e) => setTradingHoursStart(e.target.value)}
+                    required
+                    className={styles.inputTime}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}>Hora de fin</label>
+                  <input
+                    type="time"
+                    value={tradingHoursEnd}
+                    onChange={(e) => setTradingHoursEnd(e.target.value)}
+                    required
+                    className={styles.inputTime}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className={styles.errorText}>{error}</p>}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full py-2 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {submitting ? 'Creando estrategia...' : 'Crear Estrategia'}
-        </button>
-      </form>
+          <button type="submit" disabled={submitting} className={styles.submitBtn}>
+            {submitting ? 'Creando estrategia...' : 'Crear Estrategia'}
+          </button>
+        </form>
+      </div>
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ManageStrategyView — vista completa de gestión cuando el usuario tiene estrategia
-// ─────────────────────────────────────────────────────────────────────────────
+// ── ManageStrategyView ───────────────────────────────────────────────────────
+// Vista principal cuando la estrategia ya existe. Tiene tres bloques:
+//
+// 1. Header        → título "Estrategia" + fecha de hoy
+// 2. Strategy card → alterna entre StrategyReadMode y StrategyEditMode
+//                    según el state "editing"
+// 3. Rules row     → dos cards lado a lado:
+//    - Reglas conductuales (separadas por scope: PER_TRADE / PER_SESSION)
+//    - Condiciones de entrada
+//    Cada fila tiene un Toggle que hace PATCH para activar/desactivar.
+
 function ManageStrategyView({
   strategy,
   onUpdate,
@@ -231,166 +275,281 @@ function ManageStrategyView({
   strategy: StrategyWithRelations
   onUpdate: (s: StrategyWithRelations) => void
 }) {
-  // Contadores de ítems activos para el indicador visual
+  const [editing, setEditing] = useState(false)
   const activeConditions = strategy.conditions.filter((c) => c.isActive).length
   const activeRules = strategy.rules.filter((r) => r.isActive).length
-
-  // Separamos las reglas por scope para mostrarlas en subsecciones distintas.
-  // PER_TRADE: se evalúan en cada operación individual.
-  // PER_SESSION: se evalúan una vez al cerrar la sesión completa.
   const perTradeRules = strategy.rules.filter((r) => r.rule.scope === 'PER_TRADE')
   const perSessionRules = strategy.rules.filter((r) => r.rule.scope === 'PER_SESSION')
+  const dateDisplay = getTodayDisplay()
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Mi Estrategia</h1>
+    <div className={styles.page}>
 
-      {/* Indicadores de activación */}
-      <div className="flex gap-4 text-sm text-gray-500">
-        <span>
-          <span className="font-semibold text-gray-900">{activeConditions}</span> de{' '}
-          {strategy.conditions.length} condiciones activas
-        </span>
-        <span>·</span>
-        <span>
-          <span className="font-semibold text-gray-900">{activeRules}</span> de{' '}
-          {strategy.rules.length} reglas activas
-        </span>
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className={styles.header}>
+        <h1>Estrategia</h1>
+        <span className={styles.date}>{dateDisplay}</span>
       </div>
 
-      {/* StrategyInfoSection gestiona tanto la información general como los
-          límites operativos en un único componente con un único botón de guardado.
-          Se renderizan como dos cards distintos pero comparten estado y acción. */}
-      <StrategyInfoSection strategy={strategy} onUpdate={onUpdate} />
+      {/* ── Strategy card ───────────────────────────────────────────────── */}
+      <div className={`card ${styles.strategyCard}`}>
+        {editing ? (
+          <StrategyEditMode
+            strategy={strategy}
+            onUpdate={onUpdate}
+            onCancel={() => setEditing(false)}
+            onSaved={() => setEditing(false)}
+          />
+        ) : (
+          <StrategyReadMode
+            strategy={strategy}
+            onEdit={() => setEditing(true)}
+          />
+        )}
+      </div>
 
-      {/* Sección de condiciones de entrada */}
-      <section className="bg-white border border-gray-200 rounded-lg p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">
-          Condiciones de Entrada
-        </h2>
-        <p className="text-xs text-gray-500 mb-4">
-          Activa las condiciones que deben cumplirse para que una entrada sea válida.
-        </p>
-        <div className="divide-y divide-gray-100">
-          {strategy.conditions.map((sc) => (
-            <ConditionRow
-              key={sc.id}
-              item={sc}
-              onToggle={(updated) => {
-                // Reemplazamos el ítem actualizado en la lista local
-                onUpdate({
-                  ...strategy,
-                  conditions: strategy.conditions.map((c) =>
-                    c.id === updated.id ? updated : c,
-                  ),
-                })
-              }}
-            />
-          ))}
-        </div>
-      </section>
+      {/* ── Rules + Conditions row ──────────────────────────────────────── */}
+      <div className={styles.rulesRow}>
 
-      {/* Sección de reglas conductuales */}
-      <section className="bg-white border border-gray-200 rounded-lg p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">
-          Reglas Conductuales
-        </h2>
-        <p className="text-xs text-gray-500 mb-4">
-          Activa las reglas de comportamiento que te comprometes a seguir durante
-          tus sesiones de trading.
-        </p>
-
-        {/* Reglas por operación */}
-        <div className="mb-5">
-          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">
-            Por Operación
+        {/* Behavioral Rules */}
+        <div className={`card ${styles.rulesCard}`}>
+          <h3 className={styles.cardTitle}>
+            Reglas Conductuales
+            <span className="infoWrap">
+              <span className="infoIcon"><InfoIcon /></span>
+              <span className="tooltip">
+                Compromisos de disciplina que te propones cumplir durante la operativa. Se evalúan por operación o por sesión según su alcance.
+              </span>
+            </span>
+          </h3>
+          <p className={styles.cardCount}>
+            <strong>{activeRules}</strong> reglas activas de {strategy.rules.length}
           </p>
-          <div className="divide-y divide-gray-100">
-            {perTradeRules.map((sr) => (
-              <RuleRow
-                key={sr.id}
-                item={sr}
+
+          <div className={styles.cardDivider} />
+
+          <div className={styles.itemList}>
+            {perTradeRules.length > 0 && (
+              <>
+                <h3 className={styles.ruleGroupLabel}>Por Operación</h3>
+                {perTradeRules.map((sr) => (
+                  <RuleRow
+                    key={sr.id}
+                    item={sr}
+                    onToggle={(updated) => {
+                      onUpdate({
+                        ...strategy,
+                        rules: strategy.rules.map((r) => r.id === updated.id ? updated : r),
+                      })
+                    }}
+                  />
+                ))}
+              </>
+            )}
+
+            {perSessionRules.length > 0 && (
+              <>
+                <h3 className={styles.ruleGroupLabel}>Por Sesión</h3>
+                {perSessionRules.map((sr) => (
+                  <RuleRow
+                    key={sr.id}
+                    item={sr}
+                    onToggle={(updated) => {
+                      onUpdate({
+                        ...strategy,
+                        rules: strategy.rules.map((r) => r.id === updated.id ? updated : r),
+                      })
+                    }}
+                  />
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Entry Conditions */}
+        <div className={`card ${styles.conditionsCard}`}>
+          <h3 className={styles.cardTitle}>
+            Condiciones de entrada
+            <span className="infoWrap">
+              <span className="infoIcon"><InfoIcon /></span>
+              <span className="tooltip">
+                Criterios técnicos que deben cumplirse antes de abrir una operación. Violar una condición activa se registra como infracción en el ICO.
+              </span>
+            </span>
+          </h3>
+          <p className={styles.cardCount}>
+            <strong>{activeConditions}</strong> condiciones activas de {strategy.conditions.length}
+          </p>
+
+          <div className={styles.cardDivider} />
+
+          <div className={styles.itemList}>
+            {strategy.conditions.map((sc) => (
+              <ConditionRow
+                key={sc.id}
+                item={sc}
                 onToggle={(updated) => {
                   onUpdate({
                     ...strategy,
-                    rules: strategy.rules.map((r) =>
-                      r.id === updated.id ? updated : r,
-                    ),
+                    conditions: strategy.conditions.map((c) => c.id === updated.id ? updated : c),
                   })
                 }}
               />
             ))}
           </div>
         </div>
-
-        {/* Reglas por sesión */}
-        <div>
-          <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-2">
-            Por Sesión
-          </p>
-          <div className="divide-y divide-gray-100">
-            {perSessionRules.map((sr) => (
-              <RuleRow
-                key={sr.id}
-                item={sr}
-                onToggle={(updated) => {
-                  onUpdate({
-                    ...strategy,
-                    rules: strategy.rules.map((r) =>
-                      r.id === updated.id ? updated : r,
-                    ),
-                  })
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// StrategyInfoSection — edición de la información general y los límites operativos.
+// ── Strategy Read Mode ───────────────────────────────────────────────────────
+// Vista de solo lectura dentro de la strategy card. Estructura:
+//   strategyContent (flex row)
+//   ├─ strategyInfo (lado izquierdo)
+//   │   ├─ strategyHeader → "Estrategia activa" + nombre + botón Editar
+//   │   ├─ strategyDivider
+//   │   ├─ strategyDescription (si existe)
+//   │   └─ strategyCreatedAt → "Creada: 18 de mayo de 2026"
+//   └─ limitsCard (lado derecho, innerCard)
+//       ├─ limitsTitle → "Límites operativos"
+//       ├─ limitsMeta  → maxTrades, hora inicio, hora fin
+//       └─ limitsFooter
+
+function StrategyReadMode({
+  strategy,
+  onEdit,
+}: {
+  strategy: StrategyWithRelations
+  onEdit: () => void
+}) {
+  const [descExpanded, setDescExpanded] = useState(false)
+  const [descOverflows, setDescOverflows] = useState(false)
+  const descRef = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    const el = descRef.current
+    if (!el) return
+    setDescOverflows(el.scrollHeight > el.clientHeight)
+  }, [strategy.description])
+
+  return (
+    <div className={styles.strategyContent}>
+      <div className={styles.strategyInfo}>
+        <div className={styles.strategyHeader}>
+          <div>
+            <h3 className={styles.strategyActiveLabel}>
+              Estrategia activa
+              <span className="infoWrap">
+                <span className="infoIcon"><InfoIcon /></span>
+                <span className="tooltip">
+                  Tu plan de trading actual. Define las condiciones de entrada y reglas conductuales que te comprometes a seguir en cada sesión.
+                </span>
+              </span>
+            </h3>
+            <h4 className={styles.strategyName}>{strategy.name}</h4>
+          </div>
+          <button onClick={onEdit} className={`ctaBtn ctaBtnSecondary ${styles.editBtn}`}>
+            <EditIcon />
+            Editar
+          </button>
+        </div>
+
+        <div className={styles.strategyDivider} />
+
+        {strategy.description && (
+          <div className={styles.descriptionWrap}>
+            <p
+              ref={descRef}
+              className={`${styles.strategyDescription} ${descExpanded ? '' : styles.descriptionClamped}`}
+            >
+              {strategy.description}
+            </p>
+            {(descOverflows || descExpanded) && (
+              <button
+                type="button"
+                onClick={() => setDescExpanded(!descExpanded)}
+                className={styles.showMoreBtn}
+              >
+                {descExpanded ? 'Mostrar menos' : 'Mostrar más'}
+              </button>
+            )}
+          </div>
+        )}
+
+        <p className={styles.strategyCreatedAt}>
+          Creada: {formatCreatedDate(strategy.createdAt)}
+        </p>
+      </div>
+
+      <div className={`innerCard ${styles.limitsCard}`}>
+        <div className={styles.limitsHeader}>
+          <h3 className={styles.limitsTitle}>
+            Límites operativos
+            <span className="infoWrap">
+              <span className="infoIcon"><InfoIcon /></span>
+              <span className="tooltip">
+                Máximo de operaciones y horario permitido por sesión. Se aplican automáticamente al abrir una nueva sesión de trading.
+              </span>
+            </span>
+          </h3>
+        </div>
+
+        <div className={styles.limitsDivider} />
+
+        <div className={styles.limitsMeta}>
+          <p className={styles.limitsLine}>
+            Limite de operaciones: <strong>{strategy.maxTrades} trades</strong>
+          </p>
+          <p className={styles.limitsLine}>
+            Inicio de sesión: <strong>{strategy.tradingHoursStart}</strong>
+          </p>
+          <p className={styles.limitsLine}>
+            Fin de sesión: <strong>{strategy.tradingHoursEnd}</strong>
+          </p>
+        </div>
+
+        <p className={styles.limitsFooter}>
+          Estos límites se aplicarán automáticamente a cada sesión de trading.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ── Strategy Edit Mode ───────────────────────────────────────────────────────
+// Misma estructura visual que ReadMode pero con inputs en lugar de texto.
+// Se activa cuando el usuario pulsa "Editar" en ReadMode.
 //
-// Gestiona ambos grupos de campos en un único componente con un único botón
-// de guardado. Aunque se renderizan como dos tarjetas visualmente distintas,
-// comparten el mismo estado local y la misma llamada PUT para garantizar
-// consistencia: el trader no puede guardar solo el nombre sin los límites,
-// evitando estados parciales contradictorios.
-// ─────────────────────────────────────────────────────────────────────────────
-function StrategyInfoSection({
+//   strategyInfo (izquierda) → inputs de nombre y descripción
+//   limitsCard (derecha)     → inputs de maxTrades y horarios
+//
+// handleSave hace PUT /api/strategy. Si tiene éxito, actualiza el state
+// global vía onUpdate y cierra el modo edición con onSaved.
+
+function StrategyEditMode({
   strategy,
   onUpdate,
+  onCancel,
+  onSaved,
 }: {
   strategy: StrategyWithRelations
   onUpdate: (s: StrategyWithRelations) => void
+  onCancel: () => void
+  onSaved: () => void
 }) {
-  // Estado local para todos los campos editables de la estrategia
   const [name, setName] = useState(strategy.name)
   const [description, setDescription] = useState(strategy.description ?? '')
   const [maxTrades, setMaxTrades] = useState(strategy.maxTrades)
   const [tradingHoursStart, setTradingHoursStart] = useState(strategy.tradingHoursStart)
   const [tradingHoursEnd, setTradingHoursEnd] = useState(strategy.tradingHoursEnd)
-
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const [saved, setSaved] = useState(false)
-
-  // Detectamos si hay cambios sin guardar comparando el estado local con
-  // los valores que vienen de la API (prop strategy).
-  const hasChanges =
-    name !== strategy.name ||
-    description !== (strategy.description ?? '') ||
-    maxTrades !== strategy.maxTrades ||
-    tradingHoursStart !== strategy.tradingHoursStart ||
-    tradingHoursEnd !== strategy.tradingHoursEnd
 
   async function handleSave() {
     if (!name.trim()) return
 
-    // Validación del rango horario en cliente para dar feedback inmediato
-    // sin necesitar esperar la respuesta del servidor.
     if (tradingHoursStart >= tradingHoursEnd) {
       setSaveError('El horario de inicio debe ser anterior al de fin')
       return
@@ -398,21 +557,11 @@ function StrategyInfoSection({
 
     setSaving(true)
     setSaveError('')
-    setSaved(false)
 
-    // Enviamos siempre todos los campos (no solo los que cambiaron) para
-    // simplificar la lógica. El API acepta actualizaciones parciales pero
-    // aquí optamos por enviar el estado completo del formulario.
     const res = await fetch('/api/strategy', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        description,
-        maxTrades,
-        tradingHoursStart,
-        tradingHoursEnd,
-      }),
+      body: JSON.stringify({ name, description, maxTrades, tradingHoursStart, tradingHoursEnd }),
     })
 
     if (!res.ok) {
@@ -425,119 +574,122 @@ function StrategyInfoSection({
     const updated: StrategyWithRelations = await res.json()
     onUpdate(updated)
     setSaving(false)
-    setSaved(true)
-    // Ocultamos el mensaje de confirmación tras 2 segundos
-    setTimeout(() => setSaved(false), 2000)
+    onSaved()
   }
 
   return (
-    <>
-      {/* ── Tarjeta 1: Información general ──────────────────────────────────── */}
-      <section className="bg-white border border-gray-200 rounded-lg p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">
-          Información general
-        </h2>
-        <div className="space-y-4">
+    <div className={styles.strategyContent}>
+      <div className={styles.strategyInfo}>
+        <div className={styles.strategyHeader}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre
-            </label>
+            <h3 className={styles.strategyActiveLabel}>Editando estrategia</h3>
+          </div>
+          <div className={styles.editActions}>
+            <button onClick={onCancel} className={`ctaBtn ctaBtnSecondary ${styles.editBtn}`}>
+              <CancelIcon />
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !name.trim()}
+              className={`ctaBtn ctaBtnSecondary ${styles.editBtn}`}
+            >
+              <CheckIcon />
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.strategyDivider} />
+
+        <div className={styles.editFields}>
+          <div className={styles.field}>
+            <label className={styles.label}>Nombre</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.input}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Descripción <span className="text-gray-400">(opcional)</span>
+          <div className={styles.field}>
+            <label className={styles.label}>
+              Descripción <span className={styles.optional}>(opcional)</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className={styles.textarea}
             />
           </div>
         </div>
-      </section>
 
-      {/* ── Tarjeta 2: Límites operativos + botón de guardado ───────────────── */}
-      <section className="bg-white border border-gray-200 rounded-lg p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-1">
-          Límites Operativos
-        </h2>
-        <p className="text-xs text-gray-500 mb-4">
-          Estos límites se aplicarán automáticamente a cada sesión de trading.
-          Definirlos aquí (y no en cada sesión) refuerza la consistencia operativa.
-        </p>
+        {saveError && <p className={styles.errorText}>{saveError}</p>}
+      </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Máximo de operaciones por sesión
-            </label>
+      <div className={`innerCard ${styles.limitsCard}`}>
+        <div className={styles.limitsHeader}>
+          <h3 className={styles.limitsTitle}>
+            Límites operativos
+            <span className="infoWrap">
+              <span className="infoIcon"><InfoIcon /></span>
+              <span className="tooltip">
+                Máximo de operaciones y horario permitido por sesión. Se aplican automáticamente al abrir una nueva sesión de trading.
+              </span>
+            </span>
+          </h3>
+        </div>
+
+        <div className={styles.limitsDivider} />
+
+        <div className={styles.editFields}>
+          <div className={styles.field}>
+            <label className={styles.label}>Máximo de operaciones</label>
             <input
               type="number"
               min={1}
               step={1}
               value={maxTrades}
               onChange={(e) => setMaxTrades(parseInt(e.target.value, 10))}
-              className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.inputSmall}
             />
           </div>
-
-          <div className="flex flex-wrap gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Horario de inicio
-              </label>
+          <div className={styles.timeRow}>
+            <div className={styles.field}>
+              <label className={styles.label}>Inicio de sesión</label>
               <input
                 type="time"
                 value={tradingHoursStart}
                 onChange={(e) => setTradingHoursStart(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={styles.inputTime}
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Horario de fin
-              </label>
+            <div className={styles.field}>
+              <label className={styles.label}>Fin de sesión</label>
               <input
                 type="time"
                 value={tradingHoursEnd}
                 onChange={(e) => setTradingHoursEnd(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={styles.inputTime}
               />
             </div>
           </div>
-
-          {/* El botón guarda TODOS los campos (info + límites) en una sola petición */}
-          <div className="flex items-center gap-3 pt-1">
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || saving || !name.trim()}
-              className="py-1.5 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
-            {saved && (
-              <span className="text-sm text-green-600">¡Guardado correctamente!</span>
-            )}
-            {saveError && (
-              <span className="text-sm text-red-600">{saveError}</span>
-            )}
-          </div>
         </div>
-      </section>
-    </>
+
+        <p className={styles.limitsFooter}>
+          Estos límites se aplicarán automáticamente a cada sesión de trading.
+        </p>
+      </div>
+    </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Toggle — componente de interruptor visual reutilizado por condiciones y reglas
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Toggle ───────────────────────────────────────────────────────────────────
+// Interruptor on/off reutilizable (52×28px).
+// Inactivo: fondo glass. Activo: fondo verde (--color-success).
+// Solo visual — la lógica de PATCH está en ConditionRow / RuleRow.
+
 function Toggle({
   isActive,
   onToggle,
@@ -550,22 +702,20 @@ function Toggle({
       type="button"
       onClick={onToggle}
       aria-label={isActive ? 'Desactivar' : 'Activar'}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
-        isActive ? 'bg-green-500' : 'bg-gray-200'
-      }`}
+      className={isActive ? `${styles.toggle} ${styles.toggleActive}` : styles.toggle}
     >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-          isActive ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
+      <span className={isActive ? `${styles.toggleThumb} ${styles.toggleThumbOn}` : styles.toggleThumb} />
     </button>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ConditionRow — fila de una condición de entrada con su toggle
-// ─────────────────────────────────────────────────────────────────────────────
+// ── ConditionRow ─────────────────────────────────────────────────────────────
+// Fila de una condición de entrada (ej: "Tendencia Confirmada").
+// Muestra label + descripción + Toggle.
+//
+// Toggle optimista: cambia el UI inmediatamente y hace PATCH al servidor.
+// Si el PATCH falla, revierte el estado local al valor anterior.
+
 function ConditionRow({
   item,
   onToggle,
@@ -574,51 +724,43 @@ function ConditionRow({
   onToggle: (updated: StrategyConditionItem) => void
 }) {
   const [pending, setPending] = useState(false)
-  // Estado local que refleja el valor optimista (antes de confirmación de la API)
   const [isActive, setIsActive] = useState(item.isActive)
 
   async function handleToggle() {
     if (pending) return
     setPending(true)
 
-    // Aplicamos el cambio de forma optimista en la UI para que el feedback
-    // sea instantáneo. Si la API falla, revertimos.
     const next = !isActive
     setIsActive(next)
 
-    const res = await fetch(`/api/strategy/conditions/${item.id}`, {
-      method: 'PATCH',
-    })
+    const res = await fetch(`/api/strategy/conditions/${item.id}`, { method: 'PATCH' })
 
     if (!res.ok) {
-      // Revertimos el optimismo si algo salió mal
       setIsActive(!next)
       setPending(false)
       return
     }
 
     const updated = await res.json()
-    // Notificamos al padre con el valor confirmado por la API
     onToggle({ ...item, isActive: updated.isActive })
     setPending(false)
   }
 
   return (
-    <div className="flex items-start justify-between py-3 gap-4">
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
-          {item.condition.label}
-        </p>
-        <p className="text-xs text-gray-400 mt-0.5">{item.condition.description}</p>
+    <div className={styles.itemRow}>
+      <div className={styles.itemInfo}>
+        <h3 className={styles.itemLabel}>{item.condition.label}</h3>
+        <p className={styles.itemDescription}>{item.condition.description}</p>
       </div>
       <Toggle isActive={isActive} onToggle={handleToggle} />
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RuleRow — fila de una regla conductual con badge de scope y toggle
-// ─────────────────────────────────────────────────────────────────────────────
+// ── RuleRow ──────────────────────────────────────────────────────────────────
+// Igual que ConditionRow pero para reglas conductuales (ej: "Mantener SL").
+// Mismo patrón de toggle optimista con PATCH a /api/strategy/rules/[id].
+
 function RuleRow({
   item,
   onToggle,
@@ -629,18 +771,6 @@ function RuleRow({
   const [pending, setPending] = useState(false)
   const [isActive, setIsActive] = useState(item.isActive)
 
-  // Badge visual para distinguir el alcance de la regla
-  const scopeBadge =
-    item.rule.scope === 'PER_TRADE' ? (
-      <span className="inline-block text-xs font-medium px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
-        Operación
-      </span>
-    ) : (
-      <span className="inline-block text-xs font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
-        Sesión
-      </span>
-    )
-
   async function handleToggle() {
     if (pending) return
     setPending(true)
@@ -648,9 +778,7 @@ function RuleRow({
     const next = !isActive
     setIsActive(next)
 
-    const res = await fetch(`/api/strategy/rules/${item.id}`, {
-      method: 'PATCH',
-    })
+    const res = await fetch(`/api/strategy/rules/${item.id}`, { method: 'PATCH' })
 
     if (!res.ok) {
       setIsActive(!next)
@@ -664,15 +792,10 @@ function RuleRow({
   }
 
   return (
-    <div className="flex items-start justify-between py-3 gap-4">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className={`text-sm font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
-            {item.rule.label}
-          </p>
-          {scopeBadge}
-        </div>
-        <p className="text-xs text-gray-400 mt-0.5">{item.rule.description}</p>
+    <div className={styles.itemRow}>
+      <div className={styles.itemInfo}>
+        <h3 className={styles.itemLabel}>{item.rule.label}</h3>
+        <p className={styles.itemDescription}>{item.rule.description}</p>
       </div>
       <Toggle isActive={isActive} onToggle={handleToggle} />
     </div>

@@ -1,0 +1,425 @@
+/* ── Sidebar container ───────────────────────────────────────────────────── */
+
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 280px;
+  padding: 14px 14px 14px 14px;
+  z-index: 100;
+  transition: width 0.35s ease;
+}
+
+.sidebarInner {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  height: 100%;
+  background: var(--glass-base);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-lg);
+  box-shadow: 0px 0px 17px 0px rgba(75, 75, 75, 0.18);
+  padding: 20px 18px 16px;
+  overflow: hidden;
+  transition: padding 0.35s ease;
+}
+
+/* ── Logo ────────────────────────────────────────────────────────────────── */
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  margin-bottom: 30px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.logoText {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 550;
+  font-size: clamp(30px, 3vw, 35px);
+  letter-spacing: 10px;
+  color: rgba(255, 255, 255, 0.89);
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 260px;
+  opacity: 1;
+  margin-left: 5px;
+  transition: max-width 0.35s ease, opacity 0.2s ease, margin-left 0.35s ease;
+}
+
+.logoIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 0.35s ease, opacity 0.2s ease;
+}
+
+.logoMark {
+  position: relative;
+  display: block;
+  width: 40px;
+  height: 39px;
+  flex-shrink: 0;
+}
+
+.logoRing {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.logoStar {
+  position: absolute;
+  left: 18.52%;
+  top: 22.62%;
+  width: 60%;
+  height: 55.17%;
+  object-fit: contain;
+}
+
+/* ── Nav list ────────────────────────────────────────────────────────────── */
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  transition: gap 0.35s ease, padding 0.35s ease;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 60px;
+  padding: 0 16px;
+  border-radius: 11px;
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(14px, 1.5vw, 16px);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s, height 0.35s ease, padding 0.35s ease, gap 0.35s ease, border-radius 0.35s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.navLink:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.navLinkActive {
+  background: var(--glass-raised);
+  border-color: rgba(255, 255, 255, 0.21);
+  box-shadow: var(--shadow-card);
+  color: var(--text-primary);
+}
+
+.navLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 200px;
+  opacity: 1;
+  transition: max-width 0.35s ease, opacity 0.2s ease;
+}
+
+/* ── Nav icon ────────────────────────────────────────────────────────────── */
+
+.navIcon {
+  width: clamp(20px, 1.5vw, 22px);
+  height: clamp(20px, 1.5vw, 22px);
+  flex-shrink: 0;
+  transition: width 0.35s ease, height 0.35s ease;
+}
+
+/* ── Session active dot ──────────────────────────────────────────────────── */
+
+.sessionDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  margin-left: auto;
+  animation: pulse 2s ease-in-out infinite;
+  transition: margin-left 0.35s ease;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.75);
+  }
+}
+
+/* ── Logout button ───────────────────────────────────────────────────────── */
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 47px;
+  border-radius: 11px;
+  background: var(--glass-subtle);
+  border: 1px solid rgba(255, 255, 255, 0.21);
+  color: var(--text-primary);
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(14px, 1.5vw, 16px);
+  letter-spacing: 0.5px;
+  font-weight: 300;
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: background 0.15s, gap 0.35s ease, padding 0.35s ease;
+}
+
+.logoutBtn:hover {
+  background: var(--glass-base);
+}
+
+.logoutLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 200px;
+  opacity: 1;
+  transition: max-width 0.35s ease, opacity 0.2s ease;
+}
+
+.logoutIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Mobile pill + overlay (hidden on desktop) ───────────────────────────── */
+
+.mobilePill {
+  display: none;
+}
+
+.overlay {
+  display: none;
+}
+
+/* ── Compact mode (< 1220px) ─────────────────────────────────────────────── */
+
+@media (max-width: 1220px) {
+
+  .sidebar {
+    width: 110px;
+  }
+
+  .sidebarInner {
+    align-items: center;
+    padding: 20px 0 16px;
+  }
+
+  .logoText {
+    max-width: 0;
+    opacity: 0;
+    margin-left: 0;
+  }
+
+  .logoIcon {
+    max-width: 50px;
+    opacity: 1;
+  }
+
+  .nav {
+    align-items: center;
+    padding: 0 12px;
+    gap: 2px;
+  }
+
+  .navLink {
+    justify-content: center;
+    width: 65px;
+    height: 65px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .navLabel {
+    max-width: 0;
+    opacity: 0;
+  }
+
+
+  .sessionDot {
+    position: absolute;
+    top: 13px;
+    right: 13px;
+    margin-left: 0;
+  }
+
+  .logoutBtn {
+    width: 62px;
+    gap: 0;
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--text-secondary);
+  }
+
+  .logoutLabel {
+    max-width: 0;
+    opacity: 0;
+  }
+}
+
+
+
+/* ── Mobile (≤ 450px) ────────────────────────────────────────────────────── */
+/* MUST come AFTER the 1220px block so these rules win in the cascade.       */
+
+@media (max-width: 800px) {
+
+  .logo {
+    margin-bottom: 20px;
+  }
+
+  /* ── Pill button ──────────────────────────────────────────────────────── */
+  .mobilePill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 45px;
+    height: 45px;
+    z-index: 40;
+    background: var(--glass-base);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .mobilePill svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .mobilePillHidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.85);
+  }
+
+  /* ── Overlay ──────────────────────────────────────────────────────────── */
+  .overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 99;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+
+  .overlayVisible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ── Sidebar — off-screen left, slides in when .sidebarOpen ──────────── */
+  .sidebar {
+    width: 260px;
+    padding: 8px;
+    transform: translateX(-110%);
+    transition: transform 0.50s cubic-bezier(0.4, 0, 0.2, 1);
+    ;
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  /* Reset compact-mode overrides so the open sidebar looks like the full
+     desktop version (with labels, logo text, etc.). */
+  .sidebarOpen .sidebarInner {
+    align-items: stretch;
+    padding: 20px 16px 16px 16px;
+    backdrop-filter: blur(10px);
+
+  }
+
+  .sidebarOpen .logoText {
+    max-width: 260px;
+    opacity: 1;
+    margin-left: 5px;
+  }
+
+  .sidebarOpen .logoIcon {
+    max-width: 0;
+    opacity: 0;
+  }
+
+  .sidebarOpen .nav {
+    align-items: stretch;
+    padding: 0;
+    gap: 4px;
+  }
+
+  .sidebarOpen .navLink {
+    justify-content: flex-start;
+    width: auto;
+    height: 52px;
+    padding: 0 14px;
+    gap: 12px;
+  }
+
+  .sidebarOpen .navLabel {
+    max-width: 200px;
+    opacity: 1;
+  }
+
+  .sidebarOpen .navIcon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .sidebarOpen .sessionDot {
+    position: static;
+    margin-left: auto;
+  }
+
+  .sidebarOpen .logoutBtn {
+    width: auto;
+    gap: 10px;
+    background: var(--glass-subtle);
+    color: var(--text-primary);
+  }
+
+  .sidebarOpen .logoutLabel {
+    max-width: 200px;
+    opacity: 1;
+  }
+}

@@ -39,9 +39,9 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body className="min-h-full flex flex-col">
+      <body>
         {/* SessionProvider convierte la sesión JWT en contexto React accesible
             desde cualquier Client Component sin necesidad de prop drilling. */}
         <SessionProvider>{children}</SessionProvider>

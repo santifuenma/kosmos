@@ -1,0 +1,123 @@
+erDiagram
+    USER ||--o| STRATEGY : "define (0..1)"
+    USER ||--o{ DAILY_INTENTION : "planifica"
+    USER ||--o{ SESSION : "opera en"
+
+    STRATEGY ||--o{ STRATEGY_CONDITION : "selecciona"
+    STRATEGY ||--o{ STRATEGY_RULE : "selecciona"
+
+    ENTRY_CONDITION ||--o{ STRATEGY_CONDITION : "catalogada en"
+    BEHAVIORAL_RULE ||--o{ STRATEGY_RULE : "catalogada en"
+
+    DAILY_INTENTION ||--o| SESSION : "origina (0..1)"
+
+    SESSION ||--o{ TRADE : "contiene"
+    SESSION ||--o{ SESSION_VIOLATION : "registra"
+
+    TRADE ||--o{ TRADE_VIOLATION : "incumple"
+
+    BEHAVIORAL_RULE ||--o{ TRADE_VIOLATION : "violada en (PER_TRADE)"
+    ENTRY_CONDITION ||--o{ TRADE_VIOLATION : "violada en"
+    BEHAVIORAL_RULE ||--o{ SESSION_VIOLATION : "violada en (PER_SESSION)"
+
+    USER {
+        String id PK
+        String email UK
+        String password
+        String name "nullable"
+        DateTime createdAt
+        DateTime updatedAt
+    }
+
+    STRATEGY {
+        String id PK
+        String userId FK,UK
+        String name
+        String description "nullable"
+        Int maxTrades "default 3"
+        String tradingHoursStart "default 09:00"
+        String tradingHoursEnd "default 11:30"
+        DateTime createdAt
+        DateTime updatedAt
+    }
+
+    ENTRY_CONDITION {
+        String id PK
+        String code UK
+        String label
+        String description
+    }
+
+    BEHAVIORAL_RULE {
+        String id PK
+        String code UK
+        String label
+        String description
+        String scope "PER_TRADE | PER_SESSION"
+    }
+
+    STRATEGY_CONDITION {
+        String id PK
+        String strategyId FK
+        String conditionId FK
+        Boolean isActive "default true"
+    }
+
+    STRATEGY_RULE {
+        String id PK
+        String strategyId FK
+        String ruleId FK
+        Boolean isActive "default true"
+    }
+
+    DAILY_INTENTION {
+        String id PK
+        String userId FK
+        String strategyId
+        DateTime date
+        Int maxTrades
+        String tradingHoursStart
+        String tradingHoursEnd
+        String emotionalState "NEUTRAL|ANXIOUS|CONFIDENT|FRUSTRATED|TIRED"
+        String notes "nullable"
+        DateTime confirmedAt "nullable"
+        DateTime createdAt
+    }
+
+    SESSION {
+        String id PK
+        String userId FK
+        String intentionId FK,UK
+        DateTime date
+        String status "OPEN | CLOSED (default OPEN)"
+        Float icoScore "nullable 0-100"
+        DateTime createdAt
+        DateTime closedAt "nullable"
+    }
+
+    TRADE {
+        String id PK
+        String sessionId FK
+        DateTime timestamp
+        String direction "LONG | SHORT"
+        String result "WIN | LOSS | BREAKEVEN"
+        Float pnlAmount "nullable"
+        String notes "nullable"
+        DateTime createdAt
+    }
+
+    TRADE_VIOLATION {
+        String id PK
+        String tradeId FK
+        String ruleId FK "nullable"
+        String conditionId FK "nullable"
+        String type "RULE_VIOLATION | CONDITION_VIOLATION"
+        DateTime createdAt
+    }
+
+    SESSION_VIOLATION {
+        String id PK
+        String sessionId FK
+        String ruleId FK
+        DateTime createdAt
+    }

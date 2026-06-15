@@ -1,0 +1,483 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Session New (Intención Diaria) — estilos locales (CSS Module).
+
+   Primitivas reutilizables (card, innerCard, ctaBtn) viven
+   como clases globales en globals.css.
+
+   Estructura del archivo:
+     1. Layout       → contenedor de página
+     2. Header       → título + fecha
+     3. Main card    → card contenedora principal
+     4. Summary row  → estrategia + reglas + condiciones (3 columnas)
+     5. Emotion      → selector de estado emocional (5 botones)
+     6. Notes        → textarea de notas opcionales
+     7. Footer       → texto compromiso + botón confirmar
+     8. States       → loading / error / done
+     9. Responsive   → ≤ 900px / ≤ 700px
+   ────────────────────────────────────────────────────────────────────────── */
+
+
+/* ── 1. Layout ─────────────────────────────────────────────────────────── */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 14px 14px 0px;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  min-width: 381px;
+  overflow-y: auto;
+  overflow-x: clip;
+}
+
+
+/* ── 2. Header ─────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  margin-left: 5px;
+  flex-shrink: 0;
+}
+
+.date {
+  color: var(--text-secondary);
+  font-family: Montserrat, sans-serif;
+  font-size: clamp(15px, 2vw, 17px);
+  font-weight: 300;
+}
+
+
+/* ── 3. Main card ─────────────────────────────────────────────────────── */
+
+.mainCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 0 auto;
+}
+
+
+/* ── 4. Summary row ───────────────────────────────────────────────────── */
+
+.summaryRow {
+  display: flex;
+  gap: 10px;
+
+}
+
+.sectionTitle {}
+
+.strategyInfo {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  padding: 0px 5px;
+}
+
+.strategyDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 16px 0 8px;
+}
+
+.strategyMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 0px;
+}
+
+.metaLine {
+  color: var(--text-secondary);
+}
+
+.metaLine strong {
+  color: var(--text-primary);
+}
+
+.strategyFooter {
+  color: var(--text-disabled);
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: clamp(13px, 1.3vw, 14px);
+}
+
+.rulesConditionsRow {
+  display: flex;
+  width: 60%;
+  gap: 10px;
+}
+
+.rulesCard {
+  flex: 1;
+  min-width: 0;
+  min-height: 207px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 14px 10px 14px;
+  overflow: hidden;
+}
+
+.conditionsCard {
+  flex: 1;
+  min-width: 0;
+  min-height: 207px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 14px 10px 14px;
+  overflow: hidden;
+}
+
+.cardDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 8px 0;
+}
+
+.rulesList {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  height: 100%;
+}
+
+.ruleGroup {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.conditionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.ruleGroupLabel {}
+
+.ruleItem,
+.conditionItem {
+  color: var(--text-secondary);
+}
+
+.emptyText {
+  color: var(--text-disabled);
+  font-style: italic;
+}
+
+
+/* ── 5. Emotion ───────────────────────────────────────────────────────── */
+
+.emotionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding-bottom: 20px;
+  min-height: 138px;
+
+}
+
+.emotionGrid {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.emotionBtn {
+  flex: none;
+  display: flex;
+  width: clamp(130px, 10vw, 150px);
+  height: clamp(85px, 10vw, 90px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 5px;
+  background: rgba(19, 19, 19, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.emotionBtn:hover {
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.emotionBtnSelected {
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.41);
+}
+
+.emotionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.emotionIcon svg {
+  width: clamp(22px, 3vw, 25px);
+  height: clamp(22px, 3vw, 25px);
+}
+
+.emotionBtnSelected .emotionIcon {
+  color: var(--text-primary);
+}
+
+.emotionLabel {
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(13px, 1.3vw, 14px);
+  color: var(--text-secondary);
+}
+
+.emotionBtnSelected .emotionLabel {
+  color: var(--text-primary);
+}
+
+
+/* ── 6. Notes ─────────────────────────────────────────────────────────── */
+
+.notesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.notesTextarea {
+  background: rgba(52, 52, 52, 0.279);
+  flex: 1;
+  min-height: 80px;
+  resize: none;
+}
+
+.notesTextarea::placeholder {
+  color: var(--text-disabled);
+}
+
+.notesTextarea:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+
+/* ── 7. Footer ────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 5px 5px 0;
+  flex-shrink: 0;
+}
+
+.commitmentText {
+  color: var(--text-secondary);
+  line-height: 1.55;
+  max-width: 600px;
+}
+
+.confirmBtn {
+  flex-shrink: 0;
+}
+
+.confirmBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.submitError {
+  color: var(--color-danger);
+  padding: 0 5px;
+}
+
+
+/* ── 8. States ────────────────────────────────────────────────────────── */
+
+.loadingState,
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 40px;
+}
+
+.errorState {
+  color: var(--color-danger);
+}
+
+.doneState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  height: 100%;
+  padding: 40px;
+  text-align: center;
+}
+
+.doneIcon {
+  font-size: 48px;
+}
+
+.doneText {
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.doneActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+
+/* ── 9. Responsive ────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .summaryRow {
+    flex-direction: column;
+  }
+
+  .strategyDivider {
+    margin: 8px 0;
+  }
+
+  .rulesConditionsRow {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .emotionGrid {
+    flex-wrap: wrap;
+  }
+
+  .emotionBtn {
+    min-width: calc(33% - 8px);
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .commitmentText {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 800px) {
+  .page {
+    padding: 10px 14px 14px 12px;
+  }
+
+  .header {
+    margin-left: 50px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+
+  }
+
+  .date {
+    line-height: 1;
+  }
+
+  .rulesConditionsRow {
+    flex-direction: column;
+  }
+
+  .notesTextarea {
+    min-height: 120px;
+  }
+
+  .commitmentText {
+    text-align: center;
+  }
+
+  .confirmBtn {
+    text-align: center;
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    width: 100%;
+    max-width: 100vw;
+    min-width: 0;
+    padding: 7px 7px 14px 7px;
+    gap: 8px;
+  }
+
+  .header {
+    margin-left: 53px;
+    width: calc(100% - 53px);
+    gap: 2px;
+  }
+
+  .mainCard {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .summaryRow {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rulesCard,
+  .conditionsCard {
+    padding: 10px 12px;
+  }
+
+  .emotionSection {
+    padding: 10px 12px;
+  }
+
+  .emotionGrid {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .emotionBtn {
+    min-width: calc(50% - 4px);
+    padding: 12px 6px;
+  }
+
+  .notesSection {
+    padding: 10px 12px;
+  }
+
+  .footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .doneActions {
+    flex-direction: column;
+  }
+}

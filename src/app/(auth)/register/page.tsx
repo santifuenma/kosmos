@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import styles from './page.module.css'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -84,26 +85,26 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Crear Cuenta</h1>
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.heading}>Crear Cuenta</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre <span className="text-gray-400">(opcional)</span>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.field}>
+            <label className={styles.label}>
+              Nombre <span className={styles.optional}>(opcional)</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.input}
               placeholder="Tu nombre"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={styles.field}>
+            <label className={styles.label}>
               Email
             </label>
             <input
@@ -111,13 +112,13 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.input}
               placeholder="tu@email.com"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={styles.field}>
+            <label className={styles.label}>
               Contraseña
             </label>
             <input
@@ -125,13 +126,13 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.input}
               placeholder="Mínimo 6 caracteres"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={styles.field}>
+            <label className={styles.label}>
               Confirmar Contraseña
             </label>
             <input
@@ -139,27 +140,27 @@ export default function RegisterPage() {
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={styles.input}
               placeholder="Repite la contraseña"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className={styles.errorText}>{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={styles.submitBtn}
           >
             {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-center text-gray-600">
+        <p className={styles.footerText}>
           ¿Ya tienes cuenta?{' '}
-          <Link href="/login" className="text-blue-600 hover:underline">
+          <Link href="/login" className={styles.footerLink}>
             Inicia sesión
           </Link>
         </p>
