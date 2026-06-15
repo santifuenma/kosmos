@@ -220,6 +220,7 @@ model Trade {
   // Resultado objetivo de la operación al cerrarla
   // "WIN" | "LOSS" | "BREAKEVEN"
   result    String
+  asset     String?  // Ticker del activo operado (ej: "QQQ", "TSLA"); opcional
   pnlAmount Float?   // Ganancia/pérdida en unidades monetarias; opcional si no se registra
   notes     String?  // Anotaciones del trader sobre la operación concreta
   createdAt DateTime @default(now())
