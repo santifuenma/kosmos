@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import LiquidBackground from '@/components/LiquidBackground'
 import styles from './page.module.css'
 
 export default function LoginPage() {
@@ -54,7 +55,8 @@ export default function LoginPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
+      <LiquidBackground />
+      <div className={`card ${styles.card}`}>
         <h1 className={styles.heading}>Iniciar Sesión</h1>
 
         <form onSubmit={handleSubmit} className={styles.form}>
