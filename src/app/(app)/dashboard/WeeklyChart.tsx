@@ -142,11 +142,11 @@ export default function WeeklyChart({ data }: WeeklyChartProps) {
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', outline: 'none' }}>
       <span style={{ ...axisLabelStyle, bottom: cfg.icoLabel.bottom, left: cfg.icoLabel.left }}>ICO</span>
       <span style={{ ...axisLabelStyle, bottom: cfg.semanaLabel.bottom, left: cfg.semanaLabel.left }}>Semana</span>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={cfg.areaMargin}>
+        <AreaChart data={data} margin={cfg.areaMargin} style={{ outline: 'none' }}>
           <defs>
             <linearGradient id="icoAreaGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="rgba(255,255,255,0.25)" />

@@ -2,43 +2,28 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { Tooltip } from '@/components/ui/Tooltip'
+import { IcoCard } from '@/components/cards/IcoCard'
+import { PlayIcon, InfoIcon } from '@/components/icons'
+import { MonthlyCalendar } from '@/components/cards/MonthlyCalendar'
 import styles from './page.module.css'
 import WeeklyChart from './WeeklyChart'
 
-// ── Inline icons ──────────────────────────────────────────────────────────────
-
-function PlayIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <polygon points="5,3 19,12 5,21" />
-    </svg>
-  )
-}
-
-function CalIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4" y="5" width="16" height="16" rx="2" />
-      <path d="M16 3v4M8 3v4M4 11h16" />
-    </svg>
-  )
-}
-
-function InfoIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-      <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.1" />
-      <line x1="7.5" y1="6.5" x2="7.5" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="7.5" cy="4.5" r="0.8" fill="currentColor" />
-    </svg>
-  )
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// ⚠️ TEMPORAL — fija la fecha de referencia del dashboard a final de mayo 2026
+// para mostrar datos de demo. Sustituye al `new Date()` real en todos los
+// cálculos de hoy/semana/mes. Para restablecer la fecha actual:
+//   1) Poner DEMO_TODAY = null
+//   2) (Opcional) eliminar este bloque entero
+// ─────────────────────────────────────────────────────────────────────────────
+const DEMO_TODAY: Date | null = new Date(Date.UTC(2026, 4, 30, 12, 0, 0))
+const refNow = () => (DEMO_TODAY ? new Date(DEMO_TODAY) : new Date())
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatRelativeDate(dateStr: string | Date): string {
   const date = new Date(dateStr)
-  const now = new Date()
+  const now = refNow()
   const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   const dateUTC = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
   const diffDays = Math.round((todayUTC.getTime() - dateUTC.getTime()) / 86_400_000)
@@ -54,7 +39,7 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
 
-  const now = new Date()
+  const now = refNow()
   const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   const startOfTomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
@@ -114,7 +99,7 @@ export default async function DashboardPage() {
         date: true,
         icoScore: true,
         violations: { select: { id: true } },
-        trades: { select: { violations: { select: { id: true } } } },
+        trades: { select: { violations: { select: { id: true } }, pnlAmount: true } },
       },
       orderBy: { date: 'asc' },
     }),
@@ -125,7 +110,7 @@ export default async function DashboardPage() {
 
   // ── Weekly ICO ───────────────────────────────────────────────────────────
   const currentWeekIco = await (async () => {
-    const d = new Date()
+    const d = refNow()
     const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
     const day = monday.getUTCDay()
     monday.setUTCDate(monday.getUTCDate() - (day === 0 ? 6 : day - 1))
@@ -161,15 +146,6 @@ export default async function DashboardPage() {
       ? todaySession.icoScore
       : lastClosedSession?.icoScore ?? null
 
-  const RING_CIRCUMFERENCE = 364.4 // 2π × 58
-  const ringOffset = ringScore !== null ? RING_CIRCUMFERENCE * (1 - ringScore) : RING_CIRCUMFERENCE
-  const ringColorClass =
-    ringScore === null ? styles.icoRingDanger
-      : ringScore >= 0.85 ? styles.icoRingSuccess
-        : ringScore >= 0.70 ? styles.icoRingWarning
-          : styles.icoRingDanger
-  const ringDisplayNum = ringScore !== null ? Math.round(ringScore * 100) : null
-
   const monthAvgIco =
     monthSessions.length > 0
       ? Math.round(
@@ -181,6 +157,11 @@ export default async function DashboardPage() {
     s.violations.length + s.trades.reduce((ts, t) => ts + t.violations.length, 0)
 
   const monthViolations = monthSessions.reduce((sum, s) => sum + countSessionViolations(s), 0)
+  const monthPnl = monthSessions.reduce(
+    (sum, s) => sum + s.trades.reduce((ts, t) => ts + (t.pnlAmount ?? 0), 0),
+    0,
+  )
+  const hasPnl = monthSessions.some((s) => s.trades.some((t) => t.pnlAmount !== null))
 
   function isoWeek(d: Date): number {
     const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
@@ -220,11 +201,6 @@ export default async function DashboardPage() {
       }
     })
 
-  const daysInMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate()
-  const firstDow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).getUTCDay()
-  const calOffset = firstDow === 0 ? 6 : firstDow - 1
-  const todayDay = now.getUTCDate()
-
   const sessionsByDate = new Map<number, { id: string; icoScore: number | null }>()
   for (const s of monthSessions) {
     sessionsByDate.set(new Date(s.date).getUTCDate(), { id: s.id, icoScore: s.icoScore })
@@ -252,7 +228,7 @@ export default async function DashboardPage() {
 
   const ringDateRef =
     todaySession?.status === 'CLOSED'
-      ? formatRelativeDate(new Date())
+      ? formatRelativeDate(refNow())
       : lastClosedSession
         ? formatRelativeDate(lastClosedSession.date)
         : null
@@ -412,83 +388,23 @@ export default async function DashboardPage() {
         <div className={styles.metricsRow}>
 
           {/* ICO ring card */}
-          <div className={`innerCard ${styles.icoCard}`}>
-            <h3 className={styles.icoCardTitle}>
-              Último ICO diario
-              <span className="infoWrap">
-                <span className="infoIcon"><InfoIcon /></span>
-                <span className="tooltip">
-                  El ICO (Índice de Coherencia Operativa) mide qué tan fiel fuiste a tu estrategia en la última sesión cerrada. 100 significa cero violaciones registradas.
-                </span>
-              </span>
-            </h3>
-            <div className={styles.icoCardBody}>
-
-              <div className={styles.icoRingWrap}>
-                <svg
-                  viewBox="0 0 128 128"
-                  width={125}
-                  height={125}
-                  style={{ transform: 'rotate(-90deg)' }}
-                  aria-label={ringDisplayNum !== null ? `ICO: ${ringDisplayNum} de 100` : 'Sin datos ICO'}
-                >
-                  <circle cx="64" cy="64" r="58" className={styles.icoRingTrack} />
-                  <circle
-                    cx="64" cy="64" r="58"
-                    className={`${styles.icoRingProgress} ${ringColorClass}`}
-                    strokeDashoffset={ringOffset}
-                  />
-                  <g transform="rotate(90 64 64)">
-                    <text x="65" y="55" className={styles.icoNumber} textAnchor="middle" dominantBaseline="middle">
-                      {ringDisplayNum ?? '—'}
-                    </text>
-                    <text x="64" y="86" className={styles.icoDenom} textAnchor="middle" dominantBaseline="middle">
-                      /100
-                    </text>
-                  </g>
-                </svg>
-              </div>
-
-              <div className={styles.icoMeta}>
-                {ringScore !== null ? (
-                  <span className={`badge ${ringScore >= 0.85 ? 'badgeSuccess'
-                    : ringScore >= 0.70 ? 'badgeWarning'
-                      : 'badgeDanger'
-                    }`}>
-                    {ringScore >= 0.85 ? 'Alta coherencia'
-                      : ringScore >= 0.70 ? 'Coherencia media'
-                        : 'Baja coherencia'}
-                  </span>
-                ) : (
-                  <span className="badge badgeNeutral">Sin datos</span>
-                )}
-                {ringDateRef && (
-                  <p className={styles.icoMetaDate}>
-                    <CalIcon />
-                    {ringDateRef}
-                  </p>
-                )}
-                {ringViolations !== null && (
-                  <p className={styles.icoMetaViolations}>
-                    <span>✕</span>
-                    {ringViolations} {ringViolations === 1 ? 'violación' : 'violaciones'}
-                  </p>
-                )}
-              </div>
-
-            </div>
+          <div className={styles.icoCard}>
+            <IcoCard
+              score={ringScore}
+              title="Último ICO diario"
+              tooltipText="El ICO (Índice de Coherencia Operativa) mide qué tan fiel fuiste a tu estrategia en la última sesión cerrada. 100 significa cero violaciones registradas."
+              dateLabel={ringDateRef}
+              violations={ringViolations}
+            />
           </div>
 
           {/* Weekly trend chart */}
           <div className={`innerCard ${styles.chartCard}`}>
             <h3 className={styles.chartTitle}>
               Tu tendencia en el último mes
-              <span className="infoWrap">
-                <span className="infoIcon"><InfoIcon /></span>
-                <span className="tooltip">
-                  ICO promedio por semana del mes actual. Te permite ver si tu disciplina operativa está mejorando o empeorando con el tiempo.
-                </span>
-              </span>
+              <Tooltip text="ICO promedio por semana del mes actual. Te permite ver si tu disciplina operativa está mejorando o empeorando con el tiempo.">
+                <InfoIcon />
+              </Tooltip>
             </h3>
             <div className={styles.chartWrap}>
               <WeeklyChart data={weeklyChartData} />
@@ -509,76 +425,44 @@ export default async function DashboardPage() {
             Tus sesiones en el último mes
             <span className={styles.calendarTitleSep}>·</span>
             <span className={styles.calendarMonth}>{monthDisplay}</span>
-            <span className={`infoWrap ${styles.infoWrapCalendar}`}>
-              <span className="infoIcon"><InfoIcon /></span>
-              <span className="tooltip">
-                Cada punto representa una sesión cerrada. Verde = ICO ≥ 85, amarillo = ICO ≥ 70, rojo = ICO &lt; 70. Los días sin punto no tuvieron sesión registrada.
-              </span>
-            </span>
+            <Tooltip
+              wrapClassName={styles.infoWrapCalendar}
+              text="Cada punto representa una sesión cerrada. Verde = ICO ≥ 85, amarillo = ICO ≥ 70, rojo = ICO < 70. Los días sin punto no tuvieron sesión registrada."
+            >
+              <InfoIcon />
+            </Tooltip>
           </h3>
         </div>
 
         <p className={styles.calendarStats}>
-          {monthAvgIco !== null && (
-            <>
-              <span className={styles.calStatHighlight}>{monthAvgIco}</span>
-              <span className={styles.calStatDenom}>/100</span>{' '}
-            </>
+          <span className={styles.calendarStatsMain}>
+            {monthAvgIco !== null && (
+              <>
+                <span className={styles.calStatHighlight}>{monthAvgIco}</span>
+                <span className={styles.calStatDenom}>/100</span>{' '}
+              </>
+            )}
+            {monthAvgIco !== null && 'ICO promedio · '}
+            {monthSessions.length} {monthSessions.length === 1 ? 'sesión' : 'sesiones'}
+            {' · '}
+            {monthViolations} {monthViolations === 1 ? 'violación' : 'violaciones'}
+          </span>
+          {hasPnl && (
+            <span className={styles.calendarStatsPnl}>
+              {' · '}
+              {'P&L '}
+              <span className={`${styles.pnlBadge} ${monthPnl > 0 ? styles.pnlBadgePos : monthPnl < 0 ? styles.pnlBadgeNeg : styles.pnlBadgeNeutral}`}>
+                {monthPnl >= 0 ? '+' : ''}{monthPnl.toFixed(2)} USD
+              </span>
+            </span>
           )}
-          {monthAvgIco !== null && 'ICO promedio · '}
-          {monthSessions.length} {monthSessions.length === 1 ? 'sesión' : 'sesiones'}
-          {' · '}
-          {monthViolations} {monthViolations === 1 ? 'violación' : 'violaciones'}
         </p>
 
-        <div className={styles.calGridWrap}>
-
-          {/* Day-of-week headers */}
-          <div className={styles.calDowGrid}>
-            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
-              <p key={d} className={styles.calDow}>{d}</p>
-            ))}
-          </div>
-
-          {/* Day grid */}
-          <div className={styles.calGrid}>
-            {Array.from({ length: calOffset }).map((_, i) => (
-              <div key={`gap-${i}`} className={styles.calDayEmpty} />
-            ))}
-            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-              const daySess = sessionsByDate.get(day)
-              const isToday = day === todayDay
-
-              const cellClass = [
-                styles.calDay,
-                isToday ? styles.calDayToday : '',
-                daySess ? styles.calDaySession : '',
-              ].filter(Boolean).join(' ')
-
-              const dotClass = daySess
-                ? daySess.icoScore !== null && daySess.icoScore !== undefined
-                  ? daySess.icoScore >= 0.85 ? styles.calDotSuccess
-                    : daySess.icoScore >= 0.70 ? styles.calDotWarning
-                      : styles.calDotDanger
-                  : styles.calDotNeutral
-                : ''
-
-              return (
-                <div key={day} className={cellClass}>
-                  <span className={styles.calDayNum}>{day}</span>
-                  {dotClass && <span className={`${styles.calDot} ${dotClass}`} />}
-                  {dotClass && (
-                    <span className={styles.calDayIco}>
-                      {daySess?.icoScore != null ? Math.round(daySess.icoScore * 100) : '—'}
-                      <span className={styles.calDayIcoDenom}> /100</span>
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-        </div>
+        <MonthlyCalendar
+          year={now.getUTCFullYear()}
+          month={now.getUTCMonth() + 1}
+          sessionsByDate={sessionsByDate}
+        />
 
       </div>
     </div>
