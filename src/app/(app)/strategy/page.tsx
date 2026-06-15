@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { StrategyWithRelations, StrategyConditionItem, StrategyRuleItem } from '@/types'
+import { Tooltip } from '@/components/ui/Tooltip'
 import styles from './page.module.css'
 
 // ── Iconos SVG inline (lápiz, check, X) ─────────────────────────────────────
@@ -31,7 +32,7 @@ function EditIcon() {
 
 function CheckIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="20 6 9 17 4 12" />
     </svg>
   )
@@ -39,7 +40,7 @@ function CheckIcon() {
 
 function CancelIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
@@ -84,6 +85,7 @@ export default function StrategyPage() {
   const [strategy, setStrategy] = useState<StrategyWithRelations | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [hasOpenSession, setHasOpenSession] = useState(false)
 
   useEffect(() => {
     fetch('/api/strategy')
@@ -97,13 +99,27 @@ export default function StrategyPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    fetch('/api/intention')
+      .then(async (res) => {
+        if (!res.ok) return null
+        return res.json()
+      })
+      .then((data) => {
+        if (data?.session?.status === 'OPEN') {
+          setHasOpenSession(true)
+        }
+      })
+      .catch(() => { /* no bloquea la página si falla */ })
+  }, [])
+
   if (loading) return <LoadingView />
   if (error) return <ErrorView message={error} />
 
   return strategy === null ? (
     <CreateStrategyForm onCreated={setStrategy} />
   ) : (
-    <ManageStrategyView strategy={strategy} onUpdate={setStrategy} />
+    <ManageStrategyView strategy={strategy} onUpdate={setStrategy} hasOpenSession={hasOpenSession} />
   )
 }
 
@@ -268,12 +284,23 @@ function CreateStrategyForm({
 //    - Condiciones de entrada
 //    Cada fila tiene un Toggle que hace PATCH para activar/desactivar.
 
+function LockIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  )
+}
+
 function ManageStrategyView({
   strategy,
   onUpdate,
+  hasOpenSession,
 }: {
   strategy: StrategyWithRelations
   onUpdate: (s: StrategyWithRelations) => void
+  hasOpenSession: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const activeConditions = strategy.conditions.filter((c) => c.isActive).length
@@ -291,6 +318,16 @@ function ManageStrategyView({
         <span className={styles.date}>{dateDisplay}</span>
       </div>
 
+      {/* ── Lock banner ─────────────────────────────────────────────────── */}
+      {hasOpenSession && (
+        <div className={styles.lockBanner}>
+          <span className={styles.lockBannerIcon}><LockIcon /></span>
+          <p className={styles.lockBannerText}>
+            Hay una sesión en curso. La estrategia no puede modificarse hasta que la cierres.
+          </p>
+        </div>
+      )}
+
       {/* ── Strategy card ───────────────────────────────────────────────── */}
       <div className={`card ${styles.strategyCard}`}>
         {editing ? (
@@ -304,6 +341,7 @@ function ManageStrategyView({
           <StrategyReadMode
             strategy={strategy}
             onEdit={() => setEditing(true)}
+            locked={hasOpenSession}
           />
         )}
       </div>
@@ -315,12 +353,9 @@ function ManageStrategyView({
         <div className={`card ${styles.rulesCard}`}>
           <h3 className={styles.cardTitle}>
             Reglas Conductuales
-            <span className="infoWrap">
-              <span className="infoIcon"><InfoIcon /></span>
-              <span className="tooltip">
-                Compromisos de disciplina que te propones cumplir durante la operativa. Se evalúan por operación o por sesión según su alcance.
-              </span>
-            </span>
+            <Tooltip text="Compromisos de disciplina que te propones cumplir durante la operativa. Se evalúan por operación o por sesión según su alcance.">
+              <InfoIcon />
+            </Tooltip>
           </h3>
           <p className={styles.cardCount}>
             <strong>{activeRules}</strong> reglas activas de {strategy.rules.length}
@@ -336,6 +371,7 @@ function ManageStrategyView({
                   <RuleRow
                     key={sr.id}
                     item={sr}
+                    locked={hasOpenSession}
                     onToggle={(updated) => {
                       onUpdate({
                         ...strategy,
@@ -354,6 +390,7 @@ function ManageStrategyView({
                   <RuleRow
                     key={sr.id}
                     item={sr}
+                    locked={hasOpenSession}
                     onToggle={(updated) => {
                       onUpdate({
                         ...strategy,
@@ -371,12 +408,9 @@ function ManageStrategyView({
         <div className={`card ${styles.conditionsCard}`}>
           <h3 className={styles.cardTitle}>
             Condiciones de entrada
-            <span className="infoWrap">
-              <span className="infoIcon"><InfoIcon /></span>
-              <span className="tooltip">
-                Criterios técnicos que deben cumplirse antes de abrir una operación. Violar una condición activa se registra como infracción en el ICO.
-              </span>
-            </span>
+            <Tooltip text="Criterios técnicos que deben cumplirse antes de abrir una operación. Violar una condición activa se registra como infracción en el ICO.">
+              <InfoIcon />
+            </Tooltip>
           </h3>
           <p className={styles.cardCount}>
             <strong>{activeConditions}</strong> condiciones activas de {strategy.conditions.length}
@@ -389,6 +423,7 @@ function ManageStrategyView({
               <ConditionRow
                 key={sc.id}
                 item={sc}
+                locked={hasOpenSession}
                 onToggle={(updated) => {
                   onUpdate({
                     ...strategy,
@@ -420,9 +455,11 @@ function ManageStrategyView({
 function StrategyReadMode({
   strategy,
   onEdit,
+  locked,
 }: {
   strategy: StrategyWithRelations
   onEdit: () => void
+  locked?: boolean
 }) {
   const [descExpanded, setDescExpanded] = useState(false)
   const [descOverflows, setDescOverflows] = useState(false)
@@ -441,19 +478,18 @@ function StrategyReadMode({
           <div>
             <h3 className={styles.strategyActiveLabel}>
               Estrategia activa
-              <span className="infoWrap">
-                <span className="infoIcon"><InfoIcon /></span>
-                <span className="tooltip">
-                  Tu plan de trading actual. Define las condiciones de entrada y reglas conductuales que te comprometes a seguir en cada sesión.
-                </span>
-              </span>
+              <Tooltip text="Tu plan de trading actual. Define las condiciones de entrada y reglas conductuales que te comprometes a seguir en cada sesión.">
+                <InfoIcon />
+              </Tooltip>
             </h3>
             <h4 className={styles.strategyName}>{strategy.name}</h4>
           </div>
-          <button onClick={onEdit} className={`ctaBtn ctaBtnSecondary ${styles.editBtn}`}>
-            <EditIcon />
-            Editar
-          </button>
+          {!locked && (
+            <button onClick={onEdit} className={`ctaBtn ctaBtnSecondary ${styles.editBtn}`}>
+              <EditIcon />
+              Editar
+            </button>
+          )}
         </div>
 
         <div className={styles.strategyDivider} />
@@ -487,12 +523,9 @@ function StrategyReadMode({
         <div className={styles.limitsHeader}>
           <h3 className={styles.limitsTitle}>
             Límites operativos
-            <span className="infoWrap">
-              <span className="infoIcon"><InfoIcon /></span>
-              <span className="tooltip">
-                Máximo de operaciones y horario permitido por sesión. Se aplican automáticamente al abrir una nueva sesión de trading.
-              </span>
-            </span>
+            <Tooltip text="Máximo de operaciones y horario permitido por sesión. Se aplican automáticamente al abrir una nueva sesión de trading.">
+              <InfoIcon />
+            </Tooltip>
           </h3>
         </div>
 
@@ -632,12 +665,9 @@ function StrategyEditMode({
         <div className={styles.limitsHeader}>
           <h3 className={styles.limitsTitle}>
             Límites operativos
-            <span className="infoWrap">
-              <span className="infoIcon"><InfoIcon /></span>
-              <span className="tooltip">
-                Máximo de operaciones y horario permitido por sesión. Se aplican automáticamente al abrir una nueva sesión de trading.
-              </span>
-            </span>
+            <Tooltip text="Máximo de operaciones y horario permitido por sesión. Se aplican automáticamente al abrir una nueva sesión de trading.">
+              <InfoIcon />
+            </Tooltip>
           </h3>
         </div>
 
@@ -693,16 +723,25 @@ function StrategyEditMode({
 function Toggle({
   isActive,
   onToggle,
+  disabled,
 }: {
   isActive: boolean
   onToggle: () => void
+  disabled?: boolean
 }) {
+  const cls = [
+    styles.toggle,
+    isActive ? styles.toggleActive : '',
+    disabled ? styles.toggleDisabled : '',
+  ].filter(Boolean).join(' ')
+
   return (
     <button
       type="button"
-      onClick={onToggle}
+      onClick={disabled ? undefined : onToggle}
       aria-label={isActive ? 'Desactivar' : 'Activar'}
-      className={isActive ? `${styles.toggle} ${styles.toggleActive}` : styles.toggle}
+      disabled={disabled}
+      className={cls}
     >
       <span className={isActive ? `${styles.toggleThumb} ${styles.toggleThumbOn}` : styles.toggleThumb} />
     </button>
@@ -719,15 +758,17 @@ function Toggle({
 function ConditionRow({
   item,
   onToggle,
+  locked,
 }: {
   item: StrategyConditionItem
   onToggle: (updated: StrategyConditionItem) => void
+  locked?: boolean
 }) {
   const [pending, setPending] = useState(false)
   const [isActive, setIsActive] = useState(item.isActive)
 
   async function handleToggle() {
-    if (pending) return
+    if (pending || locked) return
     setPending(true)
 
     const next = !isActive
@@ -752,7 +793,7 @@ function ConditionRow({
         <h3 className={styles.itemLabel}>{item.condition.label}</h3>
         <p className={styles.itemDescription}>{item.condition.description}</p>
       </div>
-      <Toggle isActive={isActive} onToggle={handleToggle} />
+      <Toggle isActive={isActive} onToggle={handleToggle} disabled={locked} />
     </div>
   )
 }
@@ -764,15 +805,17 @@ function ConditionRow({
 function RuleRow({
   item,
   onToggle,
+  locked,
 }: {
   item: StrategyRuleItem
   onToggle: (updated: StrategyRuleItem) => void
+  locked?: boolean
 }) {
   const [pending, setPending] = useState(false)
   const [isActive, setIsActive] = useState(item.isActive)
 
   async function handleToggle() {
-    if (pending) return
+    if (pending || locked) return
     setPending(true)
 
     const next = !isActive
@@ -797,7 +840,7 @@ function RuleRow({
         <h3 className={styles.itemLabel}>{item.rule.label}</h3>
         <p className={styles.itemDescription}>{item.rule.description}</p>
       </div>
-      <Toggle isActive={isActive} onToggle={handleToggle} />
+      <Toggle isActive={isActive} onToggle={handleToggle} disabled={locked} />
     </div>
   )
 }

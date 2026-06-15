@@ -20,7 +20,13 @@
 
 /* ── 1. Layout ─────────────────────────────────────────────────────────── */
 
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .page {
+  animation: pageEnter 0.35s ease-out;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -54,6 +60,38 @@
   font-weight: 300;
   font-size: clamp(15px, 2vw, 17px);
   color: var(--text-secondary);
+}
+
+
+/* ── 2b. Lock banner ───────────────────────────────────────────────────── */
+
+.lockBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(255, 210, 64, 0.12);
+  border: 1px solid rgba(255, 210, 64, 0.30);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.lockBannerIcon {
+  display: flex;
+  align-items: center;
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.lockBannerIcon svg {
+  width: 15px;
+  height: 15px;
+  max-width: none;
+}
+
+.lockBannerText {
+  color: var(--text-secondary);
+  font-size: clamp(13px, 1.2vw, 14px);
 }
 
 
@@ -232,19 +270,7 @@
   opacity: 0.6;
 }
 
-.input,
-.textarea {
-  font-family: 'Montserrat', sans-serif;
-  font-size: clamp(12px, 1.3vw, 14px);
-  font-weight: 400;
-  color: var(--text-primary);
-  background: rgba(76, 76, 76, 0.256);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  outline: none;
-  transition: border-color 0.15s;
-}
+
 
 .input:focus,
 .textarea:focus {
@@ -413,6 +439,11 @@
 
 .toggleThumbOn {
   transform: translateX(24px);
+}
+
+.toggleDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 
@@ -616,7 +647,6 @@
 
   .editBtn {
     width: auto !important;
-
   }
 
   .limitsCard {
@@ -631,6 +661,7 @@
   .rulesCard,
   .conditionsCard {
     padding: 10px 12px;
+    min-height: 350px;
   }
 
   .itemRow {
