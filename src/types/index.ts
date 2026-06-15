@@ -102,6 +102,7 @@ export type TradeItem = {
   timestamp: string
   direction: TradeDirection
   result: TradeResult
+  asset: string | null
   pnlAmount: number | null
   notes: string | null
   createdAt: string
@@ -132,6 +133,7 @@ export type ActiveSessionData = {
   trades: TradeItem[]
   violations: SessionViolationItem[]
   intention: IntentionSnapshot
+  previousSessionDate: string | null
 }
 
 // Respuesta de GET /api/session/[id]: sesión cerrada con datos de análisis.
