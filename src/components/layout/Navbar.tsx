@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { TodayIntention } from '@/types'
 import styles from './Navbar.module.css'
 
@@ -86,6 +87,7 @@ function LogoutIcon() {
 export default function Navbar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [todayIntention, setTodayIntention] = useState<TodayIntention | null | undefined>(undefined)
 
   // Close sidebar whenever the route changes (user tapped a link).
@@ -100,21 +102,29 @@ export default function Navbar() {
         return res.json().then((data: TodayIntention) => setTodayIntention(data))
       })
       .catch(() => setTodayIntention(null))
-  }, [])
+  }, [pathname])
 
   const hasOpenSession =
     todayIntention?.confirmedAt !== null &&
     todayIntention?.confirmedAt !== undefined &&
     todayIntention?.session?.status === 'OPEN'
 
-  const sessionHref = hasOpenSession ? '/session/active' : '/session/new'
+  const hasClosedSession =
+    todayIntention?.session?.status === 'CLOSED' &&
+    todayIntention?.session?.id
+
+  const sessionHref = hasOpenSession
+    ? '/session/active'
+    : hasClosedSession
+      ? `/session/${todayIntention!.session!.id}`
+      : '/session/new'
 
   const navLinks = [
     { href: '/dashboard',  label: 'Dashboard',  icon: <HomeIcon /> },
     { href: '/strategy',   label: 'Estrategia', icon: <TargetIcon /> },
     { href: sessionHref,   label: 'Sesión',      icon: <CandlesIcon />, isSession: true },
     { href: '/history',    label: 'Historial',   icon: <CalendarIcon /> },
-    { href: '/profile',    label: 'Perfil',      icon: <UserIcon /> },
+    { href: '/profile',    label: 'Perfil',      icon: <UserIcon />, disabled: true },
   ]
 
   // Determine the active page's icon for the mobile pill.
@@ -154,11 +164,24 @@ export default function Navbar() {
 
           {/* Nav items */}
           <nav className={styles.nav}>
-            {navLinks.map(({ href, label, icon, isSession }) => {
+            {navLinks.map(({ href, label, icon, isSession, disabled }) => {
               const isActive =
                 href === '/dashboard'
                   ? pathname === '/dashboard'
                   : pathname.startsWith(isSession ? '/session' : href)
+
+              if (disabled) {
+                return (
+                  <span
+                    key={href}
+                    className={`${styles.navLink} ${styles.navLinkDisabled}`}
+                    title={label}
+                  >
+                    {icon}
+                    <span className={styles.navLabel}>{label}</span>
+                  </span>
+                )
+              }
 
               return (
                 <Link
@@ -179,7 +202,7 @@ export default function Navbar() {
 
           {/* Cerrar sesión */}
           <button
-            onClick={() => signOut({ callbackUrl: '/login' })}
+            onClick={() => setShowLogoutConfirm(true)}
             className={styles.logoutBtn}
             title="Cerrar sesión"
           >
@@ -189,6 +212,18 @@ export default function Navbar() {
 
         </div>
       </aside>
+
+      {/* Confirm dialog para logout */}
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="¿Cerrar sesión?"
+        message="Se cerrará tu sesión de cuenta. Tendrás que volver a iniciar sesión para acceder a KOSMOS."
+        confirmLabel="Cerrar sesión"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => signOut({ callbackUrl: '/login' })}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </>
   )
 }

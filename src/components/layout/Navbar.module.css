@@ -129,6 +129,12 @@
   color: var(--text-primary);
 }
 
+.navLinkDisabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
+}
+
 .navLabel {
   white-space: nowrap;
   overflow: hidden;

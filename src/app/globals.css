@@ -62,7 +62,7 @@ body {
   min-height: 100%;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: 'Montserrat', var(--font-geist-sans), system-ui, sans-serif;
   background-color: #5575a9;
   overflow-x: clip;
 }
@@ -90,17 +90,38 @@ svg {
 
 input,
 textarea {
-  font-family: 'Montserrat', sans-serif;
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  background: #4c4c4c41;
+  border: 1px solid #ffffff26;
+  outline: none;
+  padding: 8px 12px;
+  font-family: Montserrat, sans-serif;
   font-size: clamp(14px, 1.3vw, 14px);
   font-weight: 400;
-  color: var(--text-primary);
-  background: rgba(66, 66, 66, 0.256);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  outline: none;
-  transition: border-color 0.15s;
+  transition: border-color .15s;
+  line-height: 1.5;
   resize: none;
+}
+
+input:focus,
+textarea:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Ocultar spinner de number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Ocultar icono de reloj en time inputs */
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none;
 }
 
 p,
@@ -162,6 +183,8 @@ button {
   cursor: pointer;
   background: none;
   border: none;
+  font-family: inherit;
+  color: inherit;
 }
 
 table {
@@ -245,6 +268,8 @@ table {
 .ctaBtn svg {
   width: clamp(18px, 2vw, 20px);
   height: clamp(18px, 2vw, 20px);
+  max-width: none;
+  flex-shrink: 0;
 }
 
 .ctaBtn:active {
@@ -259,10 +284,20 @@ table {
 .ctaBtnSecondary {
   height: clamp(39px, 7vw, 42px);
   width: auto;
+  font-family: 'Montserrat', sans-serif;
   background: var(--glass-raised);
-  font-size: clamp(14px, 1vw, 16px);
-  font-weight: 400;
+  font-size: clamp(13px, 1vw, 16px);
+  font-weight: 300;
   padding: 0 15px;
+  color: var(--text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: var(--shadow-button);
+  transition: background 0.15s, transform 0.1s;
+  cursor: pointer;
+  gap: 5px;
+  border-radius: var(--radius-md);
 }
 
 .ctaBtnPrimary:hover {
@@ -353,6 +388,8 @@ table {
 .infoIcon svg {
   width: clamp(13px, 1.5vw, 15px);
   height: clamp(13px, 1.5vw, 15px);
+  max-width: none;
+  flex-shrink: 0;
 }
 
 .infoWrap:hover .infoIcon {
@@ -367,26 +404,166 @@ table {
   left: 50%;
   transform: translateX(-50%);
   width: 220px;
-  background: rgba(15, 8, 40, 0.55);
+  /* Fondo casi opaco: backdrop-filter no atraviesa stacking contexts
+     creados por padres con backdrop-filter (cards, modales). */
+  background: rgba(20, 18, 35, 0.96);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
   padding: 10px 13px;
   font-family: 'Montserrat', sans-serif;
   font-size: 12px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.80);
+  color: rgba(255, 255, 255, 0.85);
   line-height: 1.55;
   pointer-events: none;
   z-index: 200;
   white-space: normal;
   text-align: left;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   transition: opacity 0.15s, visibility 0.15s;
 }
 
 .infoWrap:hover .tooltip {
   visibility: visible;
   opacity: 1;
+}
+
+/* Variante posicionada arriba del icono.
+   Útil dentro de modales/contextos verticalmente apretados
+   donde la posición por defecto (abajo) solaparía contenido importante. */
+.tooltipAbove {
+  top: auto;
+  bottom: calc(100% + 10px);
+}
+
+/* Tooltip renderizado vía portal: se posiciona absolutamente respecto al
+   viewport (position: fixed) y las coords top/left/transform se setean
+   por inline style desde el componente Tooltip de React. Al estar en
+   document.body, escapa del overflow de modales/cards padres. */
+.tooltipFloat {
+  position: fixed;
+  width: 220px;
+  background: rgba(20, 18, 35, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.55;
+  pointer-events: none;
+  z-index: 9999;
+  white-space: pre-line;
+  text-align: left;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+
+/* ── Confirm Dialog (global reusable) ─────────────────────────────────── */
+
+@keyframes confirmOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes confirmOverlayOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes confirmPopIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes confirmPopOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 0; transform: scale(0.92) translateY(12px); }
+}
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 20px;
+  animation: confirmOverlayIn 0.25s ease-out;
+}
+
+.confirmOverlayClosing {
+  animation: confirmOverlayOut 0.2s ease-in forwards;
+}
+
+.confirmPanel {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(30, 30, 45, 0.82);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+  animation: confirmPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.confirmPanelClosing {
+  animation: confirmPopOut 0.2s ease-in forwards;
+}
+
+.confirmIcon {
+  font-size: 32px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.confirmTitle {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  font-size: clamp(16px, 1.5vw, 18px);
+  color: var(--text-primary);
+}
+
+.confirmMessage {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
+  font-size: clamp(13px, 1.2vw, 14px);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.confirmActions .ctaBtn {
+  flex: 1;
+  justify-content: center;
+}
+
+.ctaBtnDanger {
+  background: rgba(255, 95, 84, 0.20);
+  border-color: var(--color-danger-border);
+}
+
+.ctaBtnDanger:hover {
+  background: rgba(255, 95, 84, 0.32);
 }
 
 

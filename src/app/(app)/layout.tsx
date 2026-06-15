@@ -1,4 +1,5 @@
 import Navbar from '@/components/layout/Navbar'
+import LiquidBackground from '@/components/LiquidBackground'
 import styles from './layout.module.css'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -13,6 +14,7 @@ import styles from './layout.module.css'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.appLayout}>
+      <LiquidBackground />
       <Navbar />
       <main className={styles.main}>
         {children}
