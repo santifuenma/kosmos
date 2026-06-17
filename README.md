@@ -98,6 +98,111 @@ Definido en [`prisma/schema.prisma`](prisma/schema.prisma). Resumen:
 | `TradeViolation` | Violación de regla `PER_TRADE` o de condición de entrada en un trade. |
 | `SessionViolation` | Violación de regla `PER_SESSION` registrada al cerrar. `@@unique([sessionId, ruleId])`. |
 
+### Diagrama entidad-relación
+
+```mermaid
+erDiagram
+  User ||--o| Strategy : "tiene"
+  User ||--o{ DailyIntention : "declara"
+  User ||--o{ Session : "registra"
+
+  Strategy ||--o{ StrategyCondition : "activa"
+  Strategy ||--o{ StrategyRule : "activa"
+  Strategy ||--o{ DailyIntention : "informa"
+
+  EntryCondition ||--o{ StrategyCondition : "vincula"
+  EntryCondition ||--o{ TradeViolation : "es violada en"
+
+  BehavioralRule ||--o{ StrategyRule : "vincula"
+  BehavioralRule ||--o{ TradeViolation : "es violada en"
+  BehavioralRule ||--o{ SessionViolation : "es violada en"
+
+  DailyIntention ||--o| Session : "abre"
+  Session ||--o{ Trade : "contiene"
+  Session ||--o{ SessionViolation : "registra"
+
+  Trade ||--o{ TradeViolation : "registra"
+
+  User {
+    string id PK
+    string email UK
+    string password
+    string name
+    datetime createdAt
+  }
+  Strategy {
+    string id PK
+    string userId FK,UK
+    string name
+    int maxTrades
+    string tradingHoursStart
+    string tradingHoursEnd
+  }
+  EntryCondition {
+    string id PK
+    string code UK
+    string label
+    string description
+  }
+  BehavioralRule {
+    string id PK
+    string code UK
+    string label
+    string scope
+  }
+  StrategyCondition {
+    string id PK
+    string strategyId FK
+    string conditionId FK
+    bool isActive
+  }
+  StrategyRule {
+    string id PK
+    string strategyId FK
+    string ruleId FK
+    bool isActive
+  }
+  DailyIntention {
+    string id PK
+    string userId FK
+    string strategyId FK
+    datetime date
+    int maxTrades
+    string emotionalState
+    datetime confirmedAt
+  }
+  Session {
+    string id PK
+    string userId FK
+    string intentionId FK,UK
+    datetime date
+    string status
+    float icoScore
+    datetime closedAt
+  }
+  Trade {
+    string id PK
+    string sessionId FK
+    datetime timestamp
+    string direction
+    string result
+    string asset
+    float pnlAmount
+  }
+  TradeViolation {
+    string id PK
+    string tradeId FK
+    string ruleId FK
+    string conditionId FK
+    string type
+  }
+  SessionViolation {
+    string id PK
+    string sessionId FK
+    string ruleId FK
+  }
+```
+
 ## Cálculo del ICO
 
 Al cerrar la sesión, [`/api/session/close`](src/app/api/session/close/route.ts) calcula:
@@ -161,6 +266,8 @@ Por defecto el servidor escucha en `http://localhost:3000`. Si quieres probar de
 | `npm run build` | Build de producción con type-check estricto. |
 | `npm run start` | Sirve el build de producción. |
 | `npm run lint` | Ejecuta ESLint sobre el proyecto. |
+| `npm test` | Lanza los tests unitarios con Vitest (cobertura del cálculo del ICO y helpers de fecha). |
+| `npm run test:watch` | Ejecuta los tests en modo *watch* para desarrollo. |
 | `npm run seed:test` | Ejecuta `prisma/seed-test-data.ts` para insertar sesiones de demostración. |
 | `npx prisma migrate deploy` | Aplica migraciones pendientes a la base de datos. |
 | `npx prisma db seed` | Reinicia y siembra los catálogos (`prisma/seed.ts`). |
@@ -203,9 +310,11 @@ src/
   lib/
     auth.ts           Configuración de NextAuth
     prisma.ts         Singleton del cliente Prisma
+    ico.ts            Fórmulas del ICO diario y semanal (puras, testeables)
     dates.ts          Helpers de fecha (UTC)
     dailyTips.ts      Frases del día
     utils.ts          cn(), capitalize(), countSessionViolations()
+    *.test.ts         Tests unitarios (Vitest)
   types/
     index.ts          Tipos compartidos
     next-auth.d.ts    Extensión del tipo Session de NextAuth

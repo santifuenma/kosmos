@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
+import { computeIco } from '@/lib/ico'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/session/close
@@ -106,31 +107,21 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Cálculo del ICO ──────────────────────────────────────────────────────
+  // Componentes del denominador. La fórmula vive en `lib/ico.ts` para que
+  // sea testeable de forma aislada y reutilizable desde Server Components.
 
-  const Ts = todaySession.trades.length
-
-  // Contamos los componentes del denominador.
-  const C_activas = strategy.conditions.length
-  const R_trade   = strategy.rules.filter((sr) => sr.rule.scope === 'PER_TRADE').length
-  const R_session = activePerSessionRules.length
-
-  // Rs es el total de "instancias evaluables": cuántas cosas PODRÍA haber
-  // hecho bien el trader. Si no hay nada que evaluar, ICO = 1 por convención.
-  const Rs = Ts * C_activas + Ts * R_trade + R_session
-
-  // Vs = violaciones de cada trade + violaciones de sesión del body (aún no en BD).
   const tradeLevelViolations = todaySession.trades.reduce(
     (sum, trade) => sum + trade.violations.length,
     0,
   )
-  const Vs = tradeLevelViolations + uniqueSessionViolationIds.length
 
-  // Calculamos y normalizamos el ICO:
-  // - Math.max/min para clampearlo en [0, 1] por si Vs > Rs (teóricamente
-  //   no debería ocurrir con datos correctos, pero clampeamos por seguridad).
-  // - Redondeamos a 4 decimales para no acumular errores de punto flotante.
-  const icoRaw     = Rs === 0 ? 1.0 : 1 - Vs / Rs
-  const icoScoreValue  = Math.round(Math.max(0, Math.min(1, icoRaw)) * 10000) / 10000
+  const icoScoreValue = computeIco({
+    Ts: todaySession.trades.length,
+    cActive: strategy.conditions.length,
+    rTrade: strategy.rules.filter((sr) => sr.rule.scope === 'PER_TRADE').length,
+    rSession: activePerSessionRules.length,
+    vTotal: tradeLevelViolations + uniqueSessionViolationIds.length,
+  })
 
   // ── Cierre atómico ───────────────────────────────────────────────────────
   // Usamos una transacción interactiva para que la creación de violaciones

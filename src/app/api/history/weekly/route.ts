@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getISOWeekNumber, getMondayUTC, stdDevPopulation } from '@/lib/dates'
+import { getISOWeekNumber, getMondayUTC } from '@/lib/dates'
+import { computeWeeklyIco } from '@/lib/ico'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/history/weekly
@@ -79,22 +80,9 @@ export async function GET(request: NextRequest) {
       .map((s) => s.icoScore)
       .filter((v): v is number => v !== null)
 
-    let icoWeekly: number | null   = null
-    let avgDailyIco: number | null = null
-    let stability: number | null   = null
-
-    if (icoValues.length > 0) {
-      const M  = icoValues.reduce((a, b) => a + b, 0) / icoValues.length
-      const sd = stdDevPopulation(icoValues)
-
-      // E normaliza la desviación estándar al rango [0,1].
-      // Con sd=0 (todos iguales), E=1. Con sd=0.5 (máxima teórica), E=0.
-      const E = Math.max(0, Math.min(1, 1 - sd / 0.5))
-
-      icoWeekly   = Math.round((0.7 * M + 0.3 * E) * 10000) / 10000
-      avgDailyIco = Math.round(M * 10000) / 10000
-      stability   = Math.round(E * 10000) / 10000
-    }
+    // La fórmula vive en `lib/ico.ts`. Devuelve null cuando no hay sesiones,
+    // de modo que aquí solo destructuramos los campos cuando hay datos.
+    const weekly = computeWeeklyIco(icoValues)
 
     // Formateamos las fechas como "YYYY-MM-DD" para serialización estable.
     const fmt = (d: Date) => d.toISOString().split('T')[0]
@@ -103,10 +91,10 @@ export async function GET(request: NextRequest) {
       weekStart:    fmt(monday),
       weekEnd:      fmt(sunday),
       weekLabel:    `Sem ${getISOWeekNumber(monday)}`,
-      icoWeekly,
+      icoWeekly:    weekly?.icoWeekly   ?? null,
       sessionCount: icoValues.length,
-      avgDailyIco,
-      stability,
+      avgDailyIco:  weekly?.avgDailyIco ?? null,
+      stability:    weekly?.stability   ?? null,
       dailyIcos:    icoValues,
     })
   }

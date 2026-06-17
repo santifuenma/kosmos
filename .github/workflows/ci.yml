@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CI — verifica lint, tests unitarios y build de Next.js en cada push y PR.
+#
+# Mantenemos un solo job lineal para que el feedback sea predecible y rápido.
+# Si en el futuro los tests crecen mucho, se puede dividir lint/test/build
+# en jobs paralelos.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  verify:
+    name: Lint, test y build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Prisma 7 requiere generar el cliente antes de que TypeScript pueda
+      # resolver los tipos importados desde @prisma/client.
+      - name: Generar cliente Prisma
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests unitarios
+        run: npm test
+
+      # Para que `next build` pueda hacer type-check de las rutas que usan
+      # Prisma, necesita una base de datos accesible. Aplicamos las migraciones
+      # sobre un SQLite vacío que se descarta al terminar el job.
+      - name: Aplicar migraciones (DB de CI)
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: file:./prisma/ci.db
+
+      - name: Build
+        run: npm run build
+        env:
+          # Sustitutos válidos solo para que el build no falle por variables
+          # faltantes; nunca se usan para firmar sesiones reales.
+          NEXTAUTH_SECRET: ci-secret-not-used-anywhere
+          NEXTAUTH_URL: http://localhost:3000
+          DATABASE_URL: file:./prisma/ci.db
