@@ -11,23 +11,16 @@ import { MonthlyCalendar } from '@/components/cards/MonthlyCalendar'
 import styles from './page.module.css'
 import WeeklyChart from './WeeklyChart'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ⚠️ TEMPORAL — fija la fecha de referencia del dashboard a final de mayo 2026
-// para mostrar datos de demo. Sustituye al `new Date()` real en todos los
-// cálculos de hoy/semana/mes. Para restablecer la fecha actual:
-//   1) Poner DEMO_TODAY = null
-//   2) (Opcional) eliminar este bloque entero
-// ─────────────────────────────────────────────────────────────────────────────
-const DEMO_TODAY: Date | null = new Date(Date.UTC(2026, 4, 30, 12, 0, 0))
-const refNow = () => (DEMO_TODAY ? new Date(DEMO_TODAY) : new Date())
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Devuelve la fecha relativa al "hoy" del servidor: "Hoy, 17 de junio",
+// "Ayer, 16 de junio" o el día y mes a secas. Comparamos en UTC para que
+// las sesiones registradas alrededor de medianoche caigan en el día correcto
+// independientemente del huso horario del cliente.
 function formatRelativeDate(dateStr: string | Date): string {
   const date = new Date(dateStr)
-  const now = refNow()
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  const dateUTC = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  const todayUTC = getStartOfToday()
+  const dateUTC = getStartOfToday(date)
   const diffDays = Math.round((todayUTC.getTime() - dateUTC.getTime()) / 86_400_000)
   const dayMonth = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
   if (diffDays === 0) return `Hoy, ${dayMonth}`
@@ -41,7 +34,7 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
 
-  const now = refNow()
+  const now = new Date()
   const startOfToday = getStartOfToday(now)
   const startOfTomorrow = getStartOfTomorrow(now)
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
@@ -179,7 +172,7 @@ export default async function DashboardPage() {
 
   const ringDateRef =
     todaySession?.status === 'CLOSED'
-      ? formatRelativeDate(refNow())
+      ? formatRelativeDate(now)
       : lastClosedSession
         ? formatRelativeDate(lastClosedSession.date)
         : null

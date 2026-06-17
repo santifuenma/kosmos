@@ -257,4 +257,10 @@ model SessionViolation {
   session Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   // La regla específica que el trader incumplió durante la sesión completa
   rule    BehavioralRule @relation(fields: [ruleId], references: [id])
+
+  // Una misma regla de sesión no puede registrarse dos veces en la misma
+  // sesión: el endpoint /api/session/close ya deduplica los IDs entrantes,
+  // pero este constraint garantiza la invariante también a nivel de BD frente
+  // a inserciones concurrentes o llamadas manuales.
+  @@unique([sessionId, ruleId])
 }
