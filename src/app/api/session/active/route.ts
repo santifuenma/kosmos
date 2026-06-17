@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/session/active
@@ -14,16 +15,6 @@ import { prisma } from '@/lib/prisma'
 //   - Las violaciones de sesión (para el estado actual de reglas PER_SESSION)
 //   - La intención diaria (para horario, maxTrades y estado emocional)
 // ─────────────────────────────────────────────────────────────────────────────
-
-function getStartOfToday(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-}
-
-function getStartOfTomorrow(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
-}
 
 export async function GET() {
   const session = await getServerSession(authOptions)

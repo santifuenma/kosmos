@@ -1,22 +1,13 @@
 import { redirect } from 'next/navigation'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { capitalize, countSessionViolations } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { IcoCard } from '@/components/cards/IcoCard'
 import { MonthlyCalendar } from '@/components/cards/MonthlyCalendar'
 import { InfoIcon } from '@/components/icons'
 import styles from './page.module.css'
 import MonthNavigator from './MonthNavigator'
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
-function countSessionViolations(s: { violations: { id: string }[]; trades: { violations: { id: string }[] }[] }) {
-  return s.violations.length + s.trades.reduce((ts, t) => ts + t.violations.length, 0)
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 

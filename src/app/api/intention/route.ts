@@ -1,27 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers de fecha
+// Normalización de fechas
 //
-// Todas las intenciones se almacenan con fecha normalizada a medianoche UTC.
-// Esto garantiza que @@unique([userId, date]) funcione correctamente: dos
-// llamadas al POST en el mismo día producen la misma fecha y fallan con 409.
+// Todas las intenciones se almacenan con fecha normalizada a medianoche UTC
+// (vía `getStartOfToday()` en `lib/dates.ts`). Esto garantiza que
+// @@unique([userId, date]) funcione correctamente: dos llamadas al POST en el
+// mismo día producen la misma fecha y fallan con 409.
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Devuelve el inicio del día actual en UTC (ej: 2026-04-03T00:00:00.000Z).
-// Se usa tanto para crear como para buscar la intención del día.
-function getStartOfToday(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-}
-
-// Devuelve el inicio del día siguiente en UTC, para el filtro de rango en GET.
-function getStartOfTomorrow(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
-}
 
 // Valores válidos del enum EmotionalState definidos en el schema.
 // Los validamos aquí para dar un error claro antes de llegar a Prisma.

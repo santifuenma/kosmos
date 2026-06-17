@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/session/close
@@ -25,16 +26,6 @@ import { prisma } from '@/lib/prisma'
 // ninguna condición/regla configurada). En ese caso ICO = 1 por convención:
 // no se puede evaluar pero tampoco se penaliza.
 // ─────────────────────────────────────────────────────────────────────────────
-
-function getStartOfToday(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-}
-
-function getStartOfTomorrow(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
-}
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)

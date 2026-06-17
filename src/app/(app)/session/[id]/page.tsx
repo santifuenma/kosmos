@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { capitalize } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { IcoCard } from '@/components/cards/IcoCard'
 import { SessionStatsCard } from '@/components/cards/SessionStatsCard'
@@ -170,14 +171,15 @@ export default async function SessionDetailPage({
   const emotionIsRisky = ['ANXIOUS', 'FRUSTRATED', 'TIRED'].includes(emotionalState ?? '')
 
   // ── Fecha formateada ────────────────────────────────────────────────────
-  const dateFormatted = new Date(sessionData.date).toLocaleDateString('es-ES', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
-  const dateCapitalized = dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1)
+  const dateCapitalized = capitalize(
+    new Date(sessionData.date).toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }),
+  )
 
   const dateShort = new Date(sessionData.date).toLocaleDateString('es-ES', {
     day: 'numeric',

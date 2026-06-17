@@ -1,5 +1,5 @@
 import { Tooltip } from '@/components/ui/Tooltip'
-import { CalIcon } from '@/components/icons'
+import { CalIcon, InfoIcon } from '@/components/icons'
 import styles from './IcoCard.module.css'
 
 type IcoCardProps = {
@@ -104,12 +104,3 @@ export function IcoCard({
   )
 }
 
-function InfoIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-      <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.1" />
-      <line x1="7.5" y1="6.5" x2="7.5" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="7.5" cy="4.5" r="0.8" fill="currentColor" />
-    </svg>
-  )
-}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getMondayUTC } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/history/feedback
@@ -17,13 +18,6 @@ import { prisma } from '@/lib/prisma'
 //   4. Detectar si hay patrón recurrente (misma regla en ≥3 sesiones)
 //   5. Detectar correlación emocional negativa (requiere ≥3 sesiones)
 // ─────────────────────────────────────────────────────────────────────────────
-
-function getMondayUTC(date: Date): Date {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
-  const day = d.getUTCDay()
-  d.setUTCDate(d.getUTCDate() - (day === 0 ? 6 : day - 1))
-  return d
-}
 
 export async function GET() {
   const session = await getServerSession(authOptions)

@@ -27,30 +27,12 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { EmotionalState, TodayIntention, StrategyWithRelations } from '@/types'
 import { EMOTIONAL_STATE_LABELS } from '@/types'
+import { capitalize } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { InfoIcon, PlayIcon } from '@/components/icons'
 import styles from './page.module.css'
 
-// ── Iconos SVG inline ───────────────────────────────────────────────────────
-
-function InfoIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-      <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.1" />
-      <line x1="7.5" y1="6.5" x2="7.5" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="7.5" cy="4.5" r="0.8" fill="currentColor" />
-    </svg>
-  )
-}
-
-function PlayIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M8 5v14l11-7z" />
-    </svg>
-  )
-}
-
-// ── Iconos de estado emocional (SVG del Figma) ─────────────────────────────
+// ── Iconos de estado emocional (específicos de esta pantalla) ──────────────
 // Cada icono es un smiley estilizado que representa un estado emocional.
 // Se renderizan dentro de los botones de selección de emoción.
 
@@ -117,9 +99,9 @@ const EMOTION_ICONS: Record<EmotionalState, React.ReactNode> = {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getTodayDisplay(): string {
-  const now = new Date()
-  const raw = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-  return raw.charAt(0).toUpperCase() + raw.slice(1)
+  return capitalize(
+    new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }),
+  )
 }
 
 // ── SessionNewPage ──────────────────────────────────────────────────────────
@@ -390,7 +372,7 @@ export default function SessionNewPage() {
           </h3>
 
           <div className={styles.emotionGrid}>
-            {(Object.entries(EMOTIONAL_STATE_LABELS) as [EmotionalState, { label: string; emoji: string }][]).map(
+            {(Object.entries(EMOTIONAL_STATE_LABELS) as [EmotionalState, { label: string }][]).map(
               ([state, { label }]) => {
                 const isSelected = emotionalState === state
                 return (

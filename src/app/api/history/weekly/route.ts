@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getISOWeekNumber, getMondayUTC, stdDevPopulation } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/history/weekly
@@ -23,37 +24,6 @@ import { prisma } from '@/lib/prisma'
 // Las semanas se calculan de lunes a domingo en UTC para ser independientes
 // del huso horario del cliente.
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Devuelve el lunes de la semana que contiene la fecha dada (en UTC).
-function getMondayUTC(date: Date): Date {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
-  // getUTCDay(): 0=domingo, 1=lunes, ..., 6=sábado
-  // Si es domingo (0), retrocedemos 6 días; si es lunes (1), 0 días, etc.
-  const day = d.getUTCDay()
-  const daysToMonday = day === 0 ? 6 : day - 1
-  d.setUTCDate(d.getUTCDate() - daysToMonday)
-  return d
-}
-
-// Desviación estándar poblacional (no muestral).
-// Usamos la poblacional porque tenemos el conjunto completo de sesiones
-// de la semana, no una muestra de una población mayor.
-function stdDevPopulation(values: number[]): number {
-  if (values.length <= 1) return 0 // Con 0 o 1 valor la variabilidad es 0
-  const mean = values.reduce((a, b) => a + b, 0) / values.length
-  const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length
-  return Math.sqrt(variance)
-}
-
-// Número de semana ISO del año para el label "Sem 14".
-// La semana ISO 1 es la que contiene el primer jueves del año.
-function getISOWeekNumber(date: Date): number {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
-  const dayNum = d.getUTCDay() || 7  // convertir domingo (0) a 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)  // mover al jueves de esa semana
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
-}
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)

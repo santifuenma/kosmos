@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useRef, useState, useEffect } from 'react'
-import { ArrowLeftIcon, ArrowRightIcon } from '@/components/icons'
+import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon } from '@/components/icons'
 import styles from './page.module.css'
 
 type AvailableMonth = { year: number; month: number; label: string }
@@ -12,18 +12,6 @@ type MonthNavigatorProps = {
   month: number
   monthLabel: string
   availableMonths: AvailableMonth[]
-}
-
-function ChevronDownIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
-      style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  )
 }
 
 export default function MonthNavigator({ year, month, monthLabel, availableMonths }: MonthNavigatorProps) {

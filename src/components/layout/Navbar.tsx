@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
@@ -10,11 +11,15 @@ import styles from './Navbar.module.css'
 
 // ── Inline SVG icons ──────────────────────────────────────────────────────────
 
+// Logotipo de Kosmos: anillo (SVG) + estrella (PNG) superpuestos.
+// Cada `Image` se posiciona en absoluto vía CSS (logoRing/logoStar) dentro del
+// contenedor `.logoMark` (40×39px). Usamos `fill` para que next/image respete
+// ese tamaño manteniendo las optimizaciones de carga.
 function KosmosIcon() {
   return (
     <span className={styles.logoMark} aria-hidden="true">
-      <img src="/kosmos-ring.svg" className={styles.logoRing} alt="" />
-      <img src="/kosmos-star.png" className={styles.logoStar} alt="" />
+      <Image src="/kosmos-ring.svg" alt="" fill className={styles.logoRing} />
+      <Image src="/kosmos-star.png" alt="" fill className={styles.logoStar} />
     </span>
   )
 }

@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getStartOfToday, getStartOfTomorrow, getISOWeekNumber, getMondayUTC } from '@/lib/dates'
+import { capitalize, countSessionViolations } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { IcoCard } from '@/components/cards/IcoCard'
 import { PlayIcon, InfoIcon } from '@/components/icons'
@@ -40,8 +42,8 @@ export default async function DashboardPage() {
   if (!session?.user?.id) redirect('/login')
 
   const now = refNow()
-  const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  const startOfTomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
+  const startOfToday = getStartOfToday(now)
+  const startOfTomorrow = getStartOfTomorrow(now)
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
   const startOfNextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
 
@@ -108,37 +110,6 @@ export default async function DashboardPage() {
   const userName = session.user.name ?? session.user.email ?? 'Trader'
   const todaySession = todayIntention?.session ?? null
 
-  // ── Weekly ICO ───────────────────────────────────────────────────────────
-  const currentWeekIco = await (async () => {
-    const d = refNow()
-    const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-    const day = monday.getUTCDay()
-    monday.setUTCDate(monday.getUTCDate() - (day === 0 ? 6 : day - 1))
-
-    const sessions = await prisma.session.findMany({
-      where: {
-        userId: session.user.id,
-        status: 'CLOSED',
-        date: { gte: monday },
-        icoScore: { not: null },
-      },
-      select: { icoScore: true },
-    })
-
-    if (sessions.length === 0) return null
-
-    const icos = sessions.map((s) => s.icoScore as number)
-    const mean = icos.reduce((a, b) => a + b, 0) / icos.length
-    const variance = icos.reduce((sum, v) => sum + (v - mean) ** 2, 0) / icos.length
-    const sd = Math.sqrt(variance)
-    const stability = Math.max(0, Math.min(1, 1 - sd / 0.5))
-
-    return {
-      icoWeekly: Math.round((0.7 * mean + 0.3 * stability) * 100),
-      sessionCount: sessions.length,
-    }
-  })()
-
   // ── Derived values ───────────────────────────────────────────────────────
 
   const ringScore: number | null =
@@ -153,9 +124,6 @@ export default async function DashboardPage() {
       )
       : null
 
-  const countSessionViolations = (s: { violations: { id: string }[]; trades: { violations: { id: string }[] }[] }) =>
-    s.violations.length + s.trades.reduce((ts, t) => ts + t.violations.length, 0)
-
   const monthViolations = monthSessions.reduce((sum, s) => sum + countSessionViolations(s), 0)
   const monthPnl = monthSessions.reduce(
     (sum, s) => sum + s.trades.reduce((ts, t) => ts + (t.pnlAmount ?? 0), 0),
@@ -163,27 +131,12 @@ export default async function DashboardPage() {
   )
   const hasPnl = monthSessions.some((s) => s.trades.some((t) => t.pnlAmount !== null))
 
-  function isoWeek(d: Date): number {
-    const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-    const dow = date.getUTCDay() || 7
-    date.setUTCDate(date.getUTCDate() + 4 - dow)
-    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
-    return Math.ceil(((date.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7)
-  }
-
-  function getMonday(d: Date): Date {
-    const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-    const day = date.getUTCDay() || 7
-    date.setUTCDate(date.getUTCDate() - (day - 1))
-    return date
-  }
-
   const weekMap = new Map<number, { icos: number[]; monday: Date }>()
   for (const s of monthSessions) {
     if (s.icoScore === null) continue
     const date = new Date(s.date)
-    const wk = isoWeek(date)
-    const entry = weekMap.get(wk) ?? { icos: [], monday: getMonday(date) }
+    const wk = getISOWeekNumber(date)
+    const entry = weekMap.get(wk) ?? { icos: [], monday: getMondayUTC(date) }
     entry.icos.push(s.icoScore * 100)
     weekMap.set(wk, entry)
   }
@@ -206,10 +159,8 @@ export default async function DashboardPage() {
     sessionsByDate.set(new Date(s.date).getUTCDate(), { id: s.id, icoScore: s.icoScore })
   }
 
-  const dateRaw = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
-  const dateDisplay = dateRaw.charAt(0).toUpperCase() + dateRaw.slice(1)
-  const monthRaw = now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-  const monthDisplay = monthRaw.charAt(0).toUpperCase() + monthRaw.slice(1)
+  const dateDisplay = capitalize(now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }))
+  const monthDisplay = capitalize(now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' }))
 
   // Session state flags
   const hasNoStrategy = !strategy

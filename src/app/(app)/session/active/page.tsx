@@ -36,12 +36,14 @@ import type {
   EmotionalState,
 } from '@/types'
 import { EMOTIONAL_STATE_LABELS } from '@/types'
+import { getDailyTip } from '@/lib/dailyTips'
+import { capitalize } from '@/lib/utils'
 import styles from './page.module.css'
 
 function getTodayDisplay(): string {
-  const now = new Date()
-  const raw = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-  return raw.charAt(0).toUpperCase() + raw.slice(1)
+  return capitalize(
+    new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }),
+  )
 }
 
 export default function ActiveSessionPage() {
@@ -336,26 +338,8 @@ export default function ActiveSessionPage() {
   const emotionInfo =
     EMOTIONAL_STATE_LABELS[sessionData.intention.emotionalState as EmotionalState]
 
-  // Tip de disciplina del día (determinista por fecha, cambia cada día)
-  const DAILY_TIPS = [
-    'Sigue tus reglas aunque el mercado parezca obvio.',
-    'Respeta tu Stop-Loss siempre, sin excepciones.',
-    'La disciplina hoy construye la confianza de mañana.',
-    'Si dudas, no entres. La claridad es una condición de entrada.',
-    'No persigas el mercado. Si lo perdiste, habrá otra oportunidad.',
-    'Un trade impulsivo puede borrar días de trabajo disciplinado.',
-    'El objetivo no es acertar — es ejecutar el plan.',
-    'La paciencia también es una posición.',
-    'El mercado siempre estará mañana. Tu capital, no necesariamente.',
-    'Opera tu estrategia, no tus emociones.',
-    'Un día sin trades es un día sin violaciones.',
-    'Las reglas existen para los días difíciles, no para los fáciles.',
-    'El mejor trade que puedes hacer es no hacer el trade incorrecto.',
-    'Reduce tu tamaño cuando el mercado no está claro.',
-    'Anota cada operación. La reflexión es parte del proceso.',
-  ]
-  const dayIndex = Math.floor(Date.now() / 86_400_000) % DAILY_TIPS.length
-  const dailyTip = DAILY_TIPS[dayIndex]
+  // Tip del día (determinista, definido en lib/dailyTips).
+  const dailyTip = getDailyTip()
 
   // P&L de la sesión
   const sessionPnl = sessionData.trades.reduce((sum, t) => sum + (t.pnlAmount ?? 0), 0)

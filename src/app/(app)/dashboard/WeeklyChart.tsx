@@ -9,7 +9,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
-  TooltipProps,
+  TooltipContentProps,
 } from 'recharts'
 
 const COLOR_SUCCESS = '#53e46e'
@@ -64,8 +64,12 @@ function formatWeekRange(startISO: string, endISO: string): string {
   return `Del ${startDay} de ${startMonth} al ${endDay} de ${endMonth}`
 }
 
-// Tooltip sobre los puntos del gráfico
-function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
+// Tooltip sobre los puntos del gráfico.
+// Recharts 3.x usa `TooltipContentProps` (no `TooltipProps`) para tipar el
+// argumento que recibe el componente personalizado pasado a `<Tooltip content=…>`.
+// Mantenemos los genéricos por defecto del tipo para que la prop `content`
+// del componente `<Tooltip>` acepte esta función sin conflictos de varianza.
+function CustomTooltip({ active, payload }: TooltipContentProps) {
   if (!active || !payload?.length) return null
   const datum = payload[0].payload as WeekDatum
   return (
@@ -182,7 +186,7 @@ export default function WeeklyChart({ data }: WeeklyChartProps) {
             strokeWidth={1}
           />
 
-          <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.15)', strokeWidth: 0 }} />
+          <Tooltip content={CustomTooltip} cursor={{ stroke: 'rgba(255,255,255,0.15)', strokeWidth: 0 }} />
 
           <Area
             type="monotone"

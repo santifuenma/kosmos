@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/intention/confirm
@@ -22,10 +23,9 @@ export async function POST() {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
 
-  // Helpers de rango de fecha (mismo criterio que en /api/intention)
-  const now = new Date()
-  const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  const startOfTomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
+  // Rango del día actual (mismo criterio que en /api/intention)
+  const startOfToday = getStartOfToday()
+  const startOfTomorrow = getStartOfTomorrow()
 
   // Buscamos la intención de hoy con su sesión ya incluida.
   // Necesitamos session para saber si ya existe (evitar crear duplicado).

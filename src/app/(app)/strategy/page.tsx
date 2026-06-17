@@ -15,47 +15,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { StrategyWithRelations, StrategyConditionItem, StrategyRuleItem } from '@/types'
+import { capitalize } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { EditIcon, CheckIcon, CancelIcon, InfoIcon, LockIcon } from '@/components/icons'
 import styles from './page.module.css'
-
-// ── Iconos SVG inline (lápiz, check, X) ─────────────────────────────────────
-// Se definen aquí para no depender de una librería de iconos externa.
-
-function EditIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 20h4l10.5-10.5a2.121 2.121 0 0 0-3-3L5 17v3" />
-      <path d="M13.5 6.5l3 3" />
-    </svg>
-  )
-}
-
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  )
-}
-
-function CancelIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  )
-}
-
-function InfoIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-      <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.1" />
-      <line x1="7.5" y1="6.5" x2="7.5" y2="10.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="7.5" cy="4.5" r="0.8" fill="currentColor" />
-    </svg>
-  )
-}
 
 // ── Helpers de formato de fecha ──────────────────────────────────────────────
 // formatCreatedDate → "18 de mayo de 2026" (para la fecha de creación)
@@ -67,9 +30,9 @@ function formatCreatedDate(dateStr: string | Date): string {
 }
 
 function getTodayDisplay(): string {
-  const now = new Date()
-  const raw = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-  return raw.charAt(0).toUpperCase() + raw.slice(1)
+  return capitalize(
+    new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }),
+  )
 }
 
 // ── StrategyPage ─────────────────────────────────────────────────────────────
@@ -283,15 +246,6 @@ function CreateStrategyForm({
 //    - Reglas conductuales (separadas por scope: PER_TRADE / PER_SESSION)
 //    - Condiciones de entrada
 //    Cada fila tiene un Toggle que hace PATCH para activar/desactivar.
-
-function LockIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  )
-}
 
 function ManageStrategyView({
   strategy,

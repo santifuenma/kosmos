@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/session/trade
@@ -21,16 +22,6 @@ import { prisma } from '@/lib/prisma'
 
 const VALID_DIRECTIONS = ['LONG', 'SHORT'] as const
 const VALID_RESULTS    = ['WIN', 'LOSS', 'BREAKEVEN'] as const
-
-function getStartOfToday(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-}
-
-function getStartOfTomorrow(): Date {
-  const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
-}
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)

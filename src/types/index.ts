@@ -212,15 +212,16 @@ export type FeedbackResponse = {
 // rendimiento posterior de forma sistemática y comparable entre sesiones.
 export type EmotionalState = 'NEUTRAL' | 'ANXIOUS' | 'CONFIDENT' | 'FRUSTRATED' | 'TIRED'
 
-// Metadatos visuales para cada estado emocional.
-// Se centralizan aquí para que dashboard, formulario y resúmenes usen
-// siempre los mismos emojis y etiquetas sin duplicar la información.
-export const EMOTIONAL_STATE_LABELS: Record<EmotionalState, { label: string; emoji: string }> = {
-  NEUTRAL:    { label: 'Neutro',     emoji: '😐' },
-  ANXIOUS:    { label: 'Ansioso',    emoji: '😰' },
-  CONFIDENT:  { label: 'Confiado',   emoji: '💪' },
-  FRUSTRATED: { label: 'Frustrado',  emoji: '😤' },
-  TIRED:      { label: 'Cansado',    emoji: '😴' },
+// Etiqueta legible de cada estado emocional. Se centraliza aquí para que
+// dashboard, formulario y resúmenes muestren siempre el mismo texto.
+// Los iconos visuales se gestionan por separado en cada vista (SVG en
+// session/new, caritas en components/icons) porque varían según el contexto.
+export const EMOTIONAL_STATE_LABELS: Record<EmotionalState, { label: string }> = {
+  NEUTRAL:    { label: 'Neutro' },
+  ANXIOUS:    { label: 'Ansioso' },
+  CONFIDENT:  { label: 'Confiado' },
+  FRUSTRATED: { label: 'Frustrado' },
+  TIRED:      { label: 'Cansado' },
 }
 
 // Resumen de sesión que se incluye dentro de TodayIntention.
