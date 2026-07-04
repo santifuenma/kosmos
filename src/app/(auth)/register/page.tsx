@@ -13,6 +13,8 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import LiquidBackground from '@/components/LiquidBackground'
+import AuthLogo from '@/components/AuthLogo'
 import styles from './page.module.css'
 
 export default function RegisterPage() {
@@ -86,7 +88,9 @@ export default function RegisterPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
+      <LiquidBackground />
+      <div className={`card ${styles.card}`}>
+        <AuthLogo />
         <h1 className={styles.heading}>Crear Cuenta</h1>
 
         <form onSubmit={handleSubmit} className={styles.form}>
