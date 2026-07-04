@@ -3,8 +3,9 @@
 //
 // En Next.js con hot-reload (modo desarrollo), cada vez que un módulo cambia
 // Node.js re-evalúa los archivos, lo que crearía una nueva instancia de
-// PrismaClient en cada recarga. SQLite tiene un límite de conexiones
-// simultáneas, así que múltiples instancias agotarían rápidamente ese límite.
+// PrismaClient en cada recarga. Cada instancia abre su propio pool de
+// conexiones, así que múltiples instancias agotarían rápidamente el límite
+// de conexiones del pooler de Supabase.
 //
 // El patrón singleton resuelve esto guardando la instancia en `globalThis`,
 // que persiste entre re-evaluaciones de módulos durante el ciclo de vida del
@@ -13,8 +14,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { PrismaClient } from '@prisma/client'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
-import path from 'node:path'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 // Tipamos globalThis para poder almacenar la instancia sin que TypeScript
 // se queje de que la propiedad `prisma` no existe en el tipo global.
@@ -24,11 +24,10 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient() {
   // Prisma 7 migró de su propio motor Rust a driver adapters de Node.js.
-  // Para SQLite usamos `better-sqlite3` a través de su adaptador oficial.
-  // La URL debe ser una ruta absoluta al fichero .db; usamos process.cwd()
-  // para que funcione independientemente de desde dónde se arranque el proceso.
-  const dbPath = path.join(process.cwd(), 'prisma', 'dev.db')
-  const adapter = new PrismaBetterSqlite3({ url: dbPath })
+  // Para PostgreSQL usamos `pg` a través del adaptador oficial @prisma/adapter-pg.
+  // En runtime la app se conecta por el pooler de transacción de Supabase
+  // (DATABASE_URL, puerto 6543), idóneo para entornos serverless como Vercel.
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
   return new PrismaClient({ adapter })
 }
 

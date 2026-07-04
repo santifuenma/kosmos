@@ -10,12 +10,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { defineConfig } from "prisma/config";
-import path from "node:path";
-
-// Construimos la ruta absoluta al fichero SQLite.
-// Usamos path.join en lugar de una ruta relativa para que funcione
-// independientemente del directorio desde el que se ejecuten los comandos CLI.
-const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+// Prisma 7 deja de cargar `.env` automáticamente cuando existe prisma.config.ts,
+// así que lo cargamos nosotros para que `process.env.DIRECT_URL` esté disponible
+// al ejecutar comandos de la CLI (migrate, db seed).
+import "dotenv/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -27,8 +25,9 @@ export default defineConfig({
     seed: "npx tsx prisma/seed.ts",
   },
   datasource: {
-    // Protocolo `file:` indica a SQLite que use un fichero local.
-    // El path absoluto evita ambigüedades al ejecutar comandos desde distintos directorios.
-    url: `file:${dbPath}`,
+    // La CLI de Prisma (migraciones) usa la conexión directa de sesión (:5432),
+    // no el pooler de transacción (:6543), que no soporta el protocolo completo
+    // que requieren las migraciones.
+    url: process.env.DIRECT_URL,
   },
 });

@@ -12,15 +12,15 @@
 // Para ejecutar: `npx prisma db seed` (configurado en prisma.config.ts)
 // ─────────────────────────────────────────────────────────────────────────────
 
+import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
-import path from 'node:path'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 // Creamos el cliente directamente (sin el singleton de src/lib/prisma.ts)
 // porque el seed se ejecuta fuera del contexto de Next.js y no hay riesgo
-// de múltiples instancias con hot-reload.
-const dbPath = path.join(process.cwd(), 'prisma', 'dev.db')
-const adapter = new PrismaBetterSqlite3({ url: dbPath })
+// de múltiples instancias con hot-reload. Al correr por CLI (tsx) cargamos
+// `.env` manualmente con dotenv para disponer de DATABASE_URL.
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
 
 async function main() {

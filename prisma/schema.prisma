@@ -19,9 +19,11 @@ generator client {
 }
 
 datasource db {
-  // SQLite es suficiente para el MVP: base de datos local sin infraestructura.
-  // En producción se migraría a PostgreSQL cambiando solo este provider y la URL.
-  provider = "sqlite"
+  // PostgreSQL gestionado por Supabase. La app se conecta en runtime mediante el
+  // pooler de transacción (DATABASE_URL) a través del driver adapter @prisma/adapter-pg;
+  // la CLI de Prisma usa la conexión de sesión (DIRECT_URL) definida en prisma.config.ts
+  // para ejecutar migraciones, que no pueden ir por el pooler de transacción.
+  provider = "postgresql"
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
