@@ -14,12 +14,14 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import LiquidBackground from '@/components/LiquidBackground'
 import AuthLogo from '@/components/AuthLogo'
+import { AlertIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
 import styles from './page.module.css'
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -80,19 +82,34 @@ export default function LoginPage() {
             <label className={styles.label}>
               Contraseña
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className={styles.input}
-              placeholder="••••••"
-            />
+            <div className={styles.passwordWrapper}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className={`${styles.input} ${styles.passwordInput}`}
+                placeholder="••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className={styles.eyeToggle}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                aria-pressed={showPassword}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOffIcon className={styles.eyeIcon} /> : <EyeIcon className={styles.eyeIcon} />}
+              </button>
+            </div>
           </div>
 
           {/* Mostramos el error solo cuando existe, sin reservar espacio vacío */}
           {error && (
-            <p className={styles.errorText}>{error}</p>
+            <p className={styles.errorText} role="alert">
+              <AlertIcon className={styles.errorIcon} />
+              {error}
+            </p>
           )}
 
           <button

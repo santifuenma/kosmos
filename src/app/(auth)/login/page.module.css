@@ -51,12 +51,60 @@
   width: 100%;
 }
 
+.passwordWrapper {
+  position: relative;
+  display: flex;
+}
+
+.passwordInput {
+  padding-right: 42px;
+}
+
+.eyeToggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.eyeToggle:hover {
+  color: var(--text-primary);
+}
+
+.eyeIcon {
+  width: 18px;
+  height: 18px;
+}
+
 .errorText {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
   font-family: 'Montserrat', sans-serif;
-  font-weight: 400;
+  font-weight: 500;
   font-size: 13px;
-  color: var(--color-danger-text);
+  color: var(--text-primary);
   text-align: center;
+}
+
+.errorIcon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--text-primary);
 }
 
 .submitBtn {

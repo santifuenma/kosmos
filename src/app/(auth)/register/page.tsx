@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import LiquidBackground from '@/components/LiquidBackground'
 import AuthLogo from '@/components/AuthLogo'
+import { AlertIcon, EyeIcon, EyeOffIcon } from '@/components/icons'
 import styles from './page.module.css'
 
 export default function RegisterPage() {
@@ -23,6 +24,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -125,32 +128,59 @@ export default function RegisterPage() {
             <label className={styles.label}>
               Contraseña
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className={styles.input}
-              placeholder="Mínimo 6 caracteres"
-            />
+            <div className={styles.passwordWrapper}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className={`${styles.input} ${styles.passwordInput}`}
+                placeholder="Mínimo 6 caracteres"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className={styles.eyeToggle}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                aria-pressed={showPassword}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOffIcon className={styles.eyeIcon} /> : <EyeIcon className={styles.eyeIcon} />}
+              </button>
+            </div>
           </div>
 
           <div className={styles.field}>
             <label className={styles.label}>
               Confirmar Contraseña
             </label>
-            <input
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              required
-              className={styles.input}
-              placeholder="Repite la contraseña"
-            />
+            <div className={styles.passwordWrapper}>
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+                className={`${styles.input} ${styles.passwordInput}`}
+                placeholder="Repite la contraseña"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm((v) => !v)}
+                className={styles.eyeToggle}
+                aria-label={showConfirm ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                aria-pressed={showConfirm}
+                tabIndex={-1}
+              >
+                {showConfirm ? <EyeOffIcon className={styles.eyeIcon} /> : <EyeIcon className={styles.eyeIcon} />}
+              </button>
+            </div>
           </div>
 
           {error && (
-            <p className={styles.errorText}>{error}</p>
+            <p className={styles.errorText} role="alert">
+              <AlertIcon className={styles.errorIcon} />
+              {error}
+            </p>
           )}
 
           <button
