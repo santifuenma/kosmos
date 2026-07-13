@@ -230,9 +230,9 @@ async function main() {
   }
   await prisma.dailyIntention.deleteMany({ where: { userId: user.id } })
 
-  // ── 3. Generar los días de junio (1) a julio (5) 2026 ──────────────────────
+  // ── 3. Generar los días de junio (1) a julio (24) 2026 ─────────────────────
   const from = new Date(Date.UTC(2026, 5, 1)) // 1 junio 2026
-  const to = new Date(Date.UTC(2026, 6, 5)) // 5 julio 2026
+  const to = new Date(Date.UTC(2026, 6, 24)) // 24 julio 2026
   const days = tradingDays(from, to)
 
   const C_activas = ACTIVE_CONDITIONS.length
