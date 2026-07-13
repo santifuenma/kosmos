@@ -175,20 +175,20 @@ export function TradesTable({ trades, variant = 'static', showTotal = false }: T
           {hasTotalRow && (
             <tfoot>
               <tr className={styles.staticTotalRow}>
-                <td colSpan={6}>
-                  <div className={styles.staticTotalCell}>
-                    <span className={styles.staticTotalLabel}>Total:</span>
-                    <p
-                      ref={(el) => { pnlRefs.current[trades.length] = el }}
-                      className={
-                        totalPnl > 0 ? styles.pnlPositive
-                          : totalPnl < 0 ? styles.pnlNegative
-                            : styles.pnlNeutral
-                      }
-                    >
-                      {totalPnl > 0 ? '+' : ''}{totalPnl} USD
-                    </p>
-                  </div>
+                <td colSpan={5} className={styles.staticTotalLabelCell}>
+                  <span className={styles.staticTotalLabel}>Total:</span>
+                </td>
+                <td>
+                  <p
+                    ref={(el) => { pnlRefs.current[trades.length] = el }}
+                    className={
+                      totalPnl > 0 ? styles.pnlPositive
+                        : totalPnl < 0 ? styles.pnlNegative
+                          : styles.pnlNeutral
+                    }
+                  >
+                    {totalPnl > 0 ? '+' : ''}{totalPnl} USD
+                  </p>
                 </td>
               </tr>
             </tfoot>
