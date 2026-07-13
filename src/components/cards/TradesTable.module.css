@@ -21,6 +21,12 @@
 
 /* # */
 
+/* PnL: alineado a la derecha para que coincida con el badge del Total */
+.staticTable th:nth-child(6),
+.staticTable td:nth-child(6) {
+  text-align: right;
+}
+
 .staticTable th {
   font-weight: 400;
   color: var(--text-muted);
@@ -64,7 +70,6 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  padding-right: 4px;
 }
 
 .staticTotalLabel {
