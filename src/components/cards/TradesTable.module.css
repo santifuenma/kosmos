@@ -53,15 +53,6 @@
   overflow-y: auto;
 }
 
-.staticTable thead th {
-  position: sticky;
-  top: 0;
-  background: var(--glass-raised);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  z-index: 1;
-}
-
 .staticTotalRow td {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding-top: 6px;
