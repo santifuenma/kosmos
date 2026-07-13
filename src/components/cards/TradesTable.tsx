@@ -70,6 +70,20 @@ export function TradesTable({ trades, variant = 'static', showTotal = false }: T
 
     equalize(pnlRefs.current)
     equalize(violRefs.current)
+
+    // El badge del Total vive en una celda que ocupa toda la fila (colSpan),
+    // así que alinearlo "a la derecha" no coincide necesariamente con el
+    // centrado de los badges de PnL de cada trade si la tabla reparte ancho
+    // sobrante en esa columna. Medimos el desfase real contra un badge de
+    // fila y lo compensamos con un margen, en vez de un padding fijo que
+    // se desalinearía con datos distintos.
+    const rowBadge = pnlRefs.current[0]
+    const totalBadge = pnlRefs.current[trades.length]
+    if (rowBadge && totalBadge) {
+      totalBadge.style.marginRight = '0px'
+      const delta = totalBadge.getBoundingClientRect().right - rowBadge.getBoundingClientRect().right
+      totalBadge.style.marginRight = `${delta}px`
+    }
   })
 
   if (trades.length === 0) {
