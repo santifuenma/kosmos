@@ -109,6 +109,12 @@ textarea:focus {
   border-color: rgba(255, 255, 255, 0.35);
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
 /* Ocultar spinner de number inputs */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
