@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -18,8 +18,8 @@ import styles from './Navbar.module.css'
 function KosmosIcon() {
   return (
     <span className={styles.logoMark} aria-hidden="true">
-      <Image src="/kosmos-ring.svg" alt="" fill className={styles.logoRing} />
-      <Image src="/kosmos-star.png" alt="" fill className={styles.logoStar} />
+      <Image src="/kosmos-ring.svg" alt="" fill sizes="40px" className={styles.logoRing} />
+      <Image src="/kosmos-star.png" alt="" fill sizes="40px" className={styles.logoStar} />
     </span>
   )
 }
@@ -100,7 +100,19 @@ export default function Navbar() {
     setIsOpen(false)
   }, [pathname])
 
+  // Solo la sección /session/* puede mutar la intención/sesión del día
+  // (abrir, cerrar). Antes se refetchaba /api/intention en cada cambio de
+  // ruta, aunque fuera entre dashboard/estrategia/historial, que nunca la
+  // modifican. Ahora solo se refetch al montar y al salir de /session/*,
+  // que es el único momento en que el dato pudo haber cambiado.
+  const cameFromSessionRouteRef = useRef(true)
+
   useEffect(() => {
+    const shouldRefetch = cameFromSessionRouteRef.current
+    cameFromSessionRouteRef.current = pathname.startsWith('/session')
+
+    if (!shouldRefetch) return
+
     fetch('/api/intention')
       .then((res) => {
         if (res.status === 404) { setTodayIntention(null); return }

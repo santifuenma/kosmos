@@ -26,13 +26,88 @@ export default async function HistoryPage({ searchParams }: Props) {
 
   const startOfMonth = new Date(Date.UTC(year, month - 1, 1))
   const startOfNextMonth = new Date(Date.UTC(year, month, 1))
+  const prevMonthStart = new Date(Date.UTC(year, month - 2, 1))
+  const twoMonthsAgoStart = new Date(Date.UTC(year, month - 3, 1))
 
-  // ── Available months (for the dropdown) ──────────────────────────────────
-  const allSessionDates = await prisma.session.findMany({
-    where: { userId: session.user.id, status: 'CLOSED' },
-    select: { date: true },
-    orderBy: { date: 'asc' },
-  })
+  // ── Data fetch ────────────────────────────────────────────────────────────
+  // Estas cuatro consultas son independientes entre sí (ninguna depende del
+  // resultado de otra), así que las lanzamos en paralelo con Promise.all en
+  // vez de encadenarlas con awaits secuenciales. Con la base de datos en un
+  // pooler remoto, cada round-trip añade latencia de red; en paralelo el
+  // tiempo total es el de la consulta más lenta, no la suma de las cuatro.
+  const [allSessionDates, monthSessions, prevMonthSessions, prevTwoMonthsSessions] = await Promise.all([
+    // Available months (for the dropdown)
+    prisma.session.findMany({
+      where: { userId: session.user.id, status: 'CLOSED' },
+      select: { date: true },
+      orderBy: { date: 'asc' },
+    }),
+    prisma.session.findMany({
+      where: {
+        userId: session.user.id,
+        status: 'CLOSED',
+        date: { gte: startOfMonth, lt: startOfNextMonth },
+      },
+      select: {
+        id: true,
+        date: true,
+        icoScore: true,
+        createdAt: true,
+        closedAt: true,
+        violations: { select: { id: true, rule: { select: { label: true } } } },
+        trades: {
+          select: {
+            id: true,
+            pnlAmount: true,
+            violations: {
+              select: {
+                id: true,
+                type: true,
+                condition: { select: { label: true } },
+                rule: { select: { label: true } },
+              },
+            },
+          },
+        },
+        intention: {
+          select: { emotionalState: true },
+        },
+      },
+      orderBy: { date: 'asc' },
+    }),
+    // 1. Compare with previous month
+    prisma.session.findMany({
+      where: {
+        userId: session.user.id,
+        status: 'CLOSED',
+        date: { gte: prevMonthStart, lt: startOfMonth },
+        icoScore: { not: null },
+      },
+      select: { icoScore: true },
+    }),
+    // 6. Talón de Aquiles multi-mes
+    prisma.session.findMany({
+      where: {
+        userId: session.user.id,
+        status: 'CLOSED',
+        date: { gte: twoMonthsAgoStart, lt: startOfMonth },
+      },
+      select: {
+        date: true,
+        violations: { select: { rule: { select: { label: true } } } },
+        trades: {
+          select: {
+            violations: {
+              select: {
+                type: true,
+                rule: { select: { label: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ])
 
   const seenMonths = new Set<string>()
   const availableMonths: { year: number; month: number; label: string }[] = []
@@ -56,41 +131,6 @@ export default async function HistoryPage({ searchParams }: Props) {
       })
     }
   }
-
-  // ── Data fetch ────────────────────────────────────────────────────────────
-  const monthSessions = await prisma.session.findMany({
-    where: {
-      userId: session.user.id,
-      status: 'CLOSED',
-      date: { gte: startOfMonth, lt: startOfNextMonth },
-    },
-    select: {
-      id: true,
-      date: true,
-      icoScore: true,
-      createdAt: true,
-      closedAt: true,
-      violations: { select: { id: true, rule: { select: { label: true } } } },
-      trades: {
-        select: {
-          id: true,
-          pnlAmount: true,
-          violations: {
-            select: {
-              id: true,
-              type: true,
-              condition: { select: { label: true } },
-              rule: { select: { label: true } },
-            },
-          },
-        },
-      },
-      intention: {
-        select: { emotionalState: true },
-      },
-    },
-    orderBy: { date: 'asc' },
-  })
 
   // ── Derived values ──────────────────────────────────────────────────────
   const monthLabel = capitalize(
@@ -130,17 +170,6 @@ export default async function HistoryPage({ searchParams }: Props) {
   const insights: string[] = []
 
   // 1. Compare with previous month
-  const prevMonthStart = new Date(Date.UTC(year, month - 2, 1))
-  const prevMonthSessions = await prisma.session.findMany({
-    where: {
-      userId: session.user.id,
-      status: 'CLOSED',
-      date: { gte: prevMonthStart, lt: startOfMonth },
-      icoScore: { not: null },
-    },
-    select: { icoScore: true },
-  })
-
   if (prevMonthSessions.length > 0 && sessionsWithIco.length > 0) {
     const prevAvg = prevMonthSessions.reduce((s, x) => s + (x.icoScore ?? 0), 0) / prevMonthSessions.length
     const currentAvg = monthAvgIco!
@@ -242,29 +271,6 @@ export default async function HistoryPage({ searchParams }: Props) {
   }
 
   // 6. Talón de Aquiles multi-mes
-  const twoMonthsAgoStart = new Date(Date.UTC(year, month - 3, 1))
-  const prevTwoMonthsSessions = await prisma.session.findMany({
-    where: {
-      userId: session.user.id,
-      status: 'CLOSED',
-      date: { gte: twoMonthsAgoStart, lt: startOfMonth },
-    },
-    select: {
-      date: true,
-      violations: { select: { rule: { select: { label: true } } } },
-      trades: {
-        select: {
-          violations: {
-            select: {
-              type: true,
-              rule: { select: { label: true } },
-            },
-          },
-        },
-      },
-    },
-  })
-
   // Build a map: "year-month" → Set<ruleLabel>
   const rulesByMonth = new Map<string, Set<string>>()
 
