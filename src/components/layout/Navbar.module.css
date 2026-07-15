@@ -39,17 +39,19 @@
 }
 
 .logoText {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 550;
-  font-size: clamp(30px, 3vw, 35px);
-  letter-spacing: 10px;
-  color: rgba(255, 255, 255, 0.89);
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
   overflow: hidden;
   max-width: 260px;
   opacity: 1;
   margin-left: 5px;
   transition: max-width 0.35s ease, opacity 0.2s ease, margin-left 0.35s ease;
+}
+
+.logoImage {
+  display: block;
+  height: 50px;
+  width: auto;
 }
 
 .logoIcon {
@@ -80,10 +82,10 @@
 
 .logoStar {
   position: absolute;
-  left: 18.52%;
-  top: 22.62%;
-  width: 60%;
-  height: 55.17%;
+  left: 17.03%;
+  top: 21.03%;
+  width: 65.93%;
+  height: 58.18%;
   object-fit: contain;
 }
 
@@ -239,6 +241,10 @@
   .sidebarInner {
     align-items: center;
     padding: 20px 0 16px;
+  }
+
+  .logo {
+    margin-bottom: 14px;
   }
 
   .logoText {

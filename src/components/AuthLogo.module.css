@@ -7,15 +7,9 @@
 }
 
 .word {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 600;
+  display: block;
   /* Deliberadamente mayor que los encabezados "Iniciar Sesión" / "Crear Cuenta"
-     (que llegan como máximo a 24px) para que el wordmark domine la cabecera. */
-  font-size: clamp(32px, 7vw, 42px);
-  letter-spacing: 10px;
-  /* Sangría izquierda que compensa el letter-spacing del último carácter,
-     manteniendo el wordmark ópticamente centrado. */
-  padding-left: 10px;
-  color: rgba(255, 255, 255, 0.89);
-  white-space: nowrap;
+     (que llegan como máximo a 24px) para que el logo domine la cabecera. */
+  height: clamp(32px, 7vw, 62px);
+  width: auto;
 }

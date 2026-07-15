@@ -6,12 +6,13 @@
 // registro para que ambas mantengan exactamente la misma cabecera de marca.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import Image from 'next/image'
 import styles from './AuthLogo.module.css'
 
 export default function AuthLogo() {
   return (
     <div className={styles.logo}>
-      <span className={styles.word}>KOSMOS</span>
+      <Image src="/kosmos-logo.svg" alt="Kosmos" width={319} height={82} priority className={styles.word} />
     </div>
   )
 }

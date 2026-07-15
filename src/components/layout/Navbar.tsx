@@ -12,14 +12,16 @@ import styles from './Navbar.module.css'
 // ── Inline SVG icons ──────────────────────────────────────────────────────────
 
 // Logotipo de Kosmos: anillo (SVG) + estrella (PNG) superpuestos.
-// Cada `Image` se posiciona en absoluto vía CSS (logoRing/logoStar) dentro del
-// contenedor `.logoMark` (40×39px). Usamos `fill` para que next/image respete
-// ese tamaño manteniendo las optimizaciones de carga.
+// El anillo llena todo el contenedor `.logoMark` (40×39px) vía `fill`.
+// La estrella NO puede usar `fill`: ese modo fuerza un inline style
+// (position:absolute; inset:0; width/height:100%) que machaca cualquier
+// posicionamiento por CSS. Por eso usa width/height explícitos y deja que
+// `.logoStar` la posicione/recorte dentro del anillo vía CSS normal.
 function KosmosIcon() {
   return (
     <span className={styles.logoMark} aria-hidden="true">
       <Image src="/kosmos-ring.svg" alt="" fill sizes="40px" className={styles.logoRing} />
-      <Image src="/kosmos-star.png" alt="" fill sizes="40px" className={styles.logoStar} />
+      <Image src="/kosmos-star.png" alt="" width={27} height={23} className={styles.logoStar} />
     </span>
   )
 }
@@ -175,7 +177,9 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link href="/dashboard" className={styles.logo} aria-label="Dashboard">
-            <span className={styles.logoText}>KOSMOS</span>
+            <span className={styles.logoText}>
+              <Image src="/kosmos-logo.svg" alt="Kosmos" width={319} height={82} priority className={styles.logoImage} />
+            </span>
             <span className={styles.logoIcon}><KosmosIcon /></span>
           </Link>
 
