@@ -49,11 +49,12 @@ export default function LoginPage() {
       return
     }
 
-    // router.refresh() fuerza a Next.js a revalidar los Server Components
-    // de la nueva ruta con la sesión ya establecida. Sin él, el dashboard
-    // podría renderizarse con datos de sesión desactualizados.
+    // signIn() ya dejó la cookie de sesión establecida antes de resolver,
+    // así que router.push('/dashboard') provoca un render fresco del Server
+    // Component que lee esa cookie nueva. NO añadimos router.refresh() aquí:
+    // encadenado tras el push forzaba un SEGUNDO render completo del dashboard
+    // (con sus 4 consultas a BD repetidas), duplicando la latencia del login.
     router.push('/dashboard')
-    router.refresh()
   }
 
   return (
