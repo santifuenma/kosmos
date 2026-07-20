@@ -26,7 +26,8 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { EmotionalState, TodayIntention, StrategyWithRelations } from '@/types'
-import { EMOTIONAL_STATE_LABELS } from '@/types'
+import { useSession } from 'next-auth/react'
+import { emotionalStateOptions } from '@/lib/gender'
 import { capitalize } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { InfoIcon, PlayIcon } from '@/components/icons'
@@ -117,6 +118,12 @@ export default function SessionNewPage() {
   const [strategy, setStrategy] = useState<StrategyWithRelations | null>(null)
   const [intention, setIntention] = useState<TodayIntention | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Género declarado en el registro: concuerda las etiquetas de estado
+  // emocional, que califican al trader. UNDISCLOSED mientras carga la sesión
+  // porque es la variante sin marca de género (ver src/lib/gender.ts).
+  const { data: authSession } = useSession()
+  const gender = authSession?.user?.gender ?? 'UNDISCLOSED'
 
   // ── Estado del formulario ────────────────────────────────────────────────
   const [emotionalState, setEmotionalState] = useState<EmotionalState | null>(null)
@@ -366,30 +373,31 @@ export default function SessionNewPage() {
         <div className={`innerCard ${styles.emotionSection}`}>
           <h3 className={styles.sectionTitle}>
             Tu estado emocional · ¿Cómo te sientes hoy?
-            <Tooltip text="Se correlaciona con tu rendimiento para identificar patrones. Sé honesto — no hay respuesta correcta.">
+            {/* "Responde con sinceridad" y no "Sé honesto": el adjetivo
+                obligaría a concordar género en una frase donde el sustantivo
+                funciona igual de bien para todo el mundo. */}
+            <Tooltip text="Se correlaciona con tu rendimiento para identificar patrones. Responde con sinceridad — no hay respuesta correcta.">
               <InfoIcon />
             </Tooltip>
           </h3>
 
           <div className={styles.emotionGrid}>
-            {(Object.entries(EMOTIONAL_STATE_LABELS) as [EmotionalState, { label: string }][]).map(
-              ([state, { label }]) => {
-                const isSelected = emotionalState === state
-                return (
-                  <button
-                    key={state}
-                    type="button"
-                    onClick={() => setEmotionalState(state)}
-                    className={isSelected
-                      ? `${styles.emotionBtn} ${styles.emotionBtnSelected}`
-                      : styles.emotionBtn}
-                  >
-                    <span className={styles.emotionIcon}>{EMOTION_ICONS[state]}</span>
-                    <span className={styles.emotionLabel}>{label}</span>
-                  </button>
-                )
-              },
-            )}
+            {emotionalStateOptions(gender).map(({ value: state, label }) => {
+              const isSelected = emotionalState === state
+              return (
+                <button
+                  key={state}
+                  type="button"
+                  onClick={() => setEmotionalState(state)}
+                  className={isSelected
+                    ? `${styles.emotionBtn} ${styles.emotionBtnSelected}`
+                    : styles.emotionBtn}
+                >
+                  <span className={styles.emotionIcon}>{EMOTION_ICONS[state]}</span>
+                  <span className={styles.emotionLabel}>{label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

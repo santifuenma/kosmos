@@ -18,6 +18,7 @@ import { NextAuthOptions, getServerSession } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { parseGender, type Gender } from '@/lib/gender'
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -64,13 +65,29 @@ export const authOptions: NextAuthOptions = {
 
         if (!passwordMatch) return null
 
+        // Cuenta sin confirmar: la comprobación va DESPUÉS de validar la
+        // contraseña a propósito. Si avisáramos antes, cualquiera podría
+        // averiguar qué direcciones están registradas probando correos sueltos.
+        //
+        // Lanzamos en lugar de devolver null para que el mensaje llegue al
+        // cliente: NextAuth propaga el texto del Error en result.error, mientras
+        // que null se convierte siempre en un genérico "CredentialsSignin".
+        if (!user.emailVerified) {
+          throw new Error('EMAIL_NOT_VERIFIED')
+        }
+
         // Devolvemos solo los campos que necesitamos en el token/sesión.
         // Excluimos el hash de la contraseña explícitamente para que nunca
         // llegue al cliente aunque el callback jwt lo procese todo.
         return {
           id: user.id,
           email: user.email,
-          name: user.name ?? null,
+          // NextAuth espera un campo `name`; le damos solo el nombre de pila,
+          // que es como se dirige la interfaz al trader.
+          name: user.firstName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          gender: parseGender(user.gender),
         }
       },
     }),
@@ -83,6 +100,11 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        // firstName y gender viajan en el token para que los componentes puedan
+        // concordar los textos sin consultar la BD en cada render.
+        token.firstName = user.firstName
+        token.lastName = user.lastName
+        token.gender = user.gender
       }
       return token
     },
@@ -94,6 +116,9 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string
+        session.user.firstName = token.firstName as string
+        session.user.lastName = token.lastName as string
+        session.user.gender = token.gender as Gender
       }
       return session
     },

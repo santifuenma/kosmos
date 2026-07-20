@@ -13,6 +13,7 @@
 
 import bcrypt from 'bcryptjs'
 import { prisma } from '../src/lib/prisma'
+import { validatePassword } from '../src/lib/password'
 
 async function main() {
   const [email, password] = process.argv.slice(2)
@@ -21,8 +22,11 @@ async function main() {
     console.error('Uso: npx tsx prisma/reset-password.ts <email> <nueva-contraseña>')
     process.exit(1)
   }
-  if (password.length < 6) {
-    console.error('La contraseña debe tener al menos 6 caracteres.')
+  // Misma política que el registro, para no abrir por la puerta de atrás una
+  // contraseña que la aplicación no habría aceptado.
+  const passwordError = validatePassword(password)
+  if (passwordError) {
+    console.error(`${passwordError}.`)
     process.exit(1)
   }
 

@@ -8,7 +8,8 @@ import { IcoCard } from '@/components/cards/IcoCard'
 import { SessionStatsCard } from '@/components/cards/SessionStatsCard'
 import { TradesTable } from '@/components/cards/TradesTable'
 import { InfoSvg, ClockIcon, BullseyeIcon, ArrowLeftIcon, CheckCircleIcon, XCircleIcon, MinusCircleIcon } from '@/components/icons'
-import { EMOTIONAL_STATE_LABELS, type EmotionalState } from '@/types'
+import { type EmotionalState } from '@/types'
+import { emotionalStateAsFeeling } from '@/lib/gender'
 import styles from './page.module.css'
 
 export default async function SessionDetailPage({
@@ -308,9 +309,9 @@ export default async function SessionDetailPage({
               {/* Estado emocional — solo si fue de riesgo y hubo violaciones */}
               {emotionIsRisky && Vs > 0 && (
                 <p className={styles.reflectionText}>
-                  Comenzaste sintiéndote{' '}
+                  Comenzaste{' '}
                   <span className={styles.reflectionHighlight}>
-                    {EMOTIONAL_STATE_LABELS[emotionalState as EmotionalState].label.toLowerCase()}
+                    {emotionalStateAsFeeling(emotionalState as EmotionalState, authSession.user.gender)}
                   </span>
                   . Considera cómo influyó ese estado en tus decisiones.
                 </p>
@@ -331,6 +332,7 @@ export default async function SessionDetailPage({
               violations={Vs}
               minutes={sessionMinutes}
               emotionalState={emotionalState}
+              gender={authSession.user.gender}
             />
           </div>
 

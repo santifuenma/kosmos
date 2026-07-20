@@ -1,6 +1,7 @@
 import { Tooltip } from '@/components/ui/Tooltip'
 import { InfoSvg, EmotionFaceIcon } from '@/components/icons'
-import { EMOTIONAL_STATE_LABELS, type EmotionalState } from '@/types'
+import { type EmotionalState } from '@/types'
+import { emotionalStateLabel, type Gender } from '@/lib/gender'
 import styles from './SessionStatsCard.module.css'
 
 type SessionStatsCardProps = {
@@ -9,6 +10,10 @@ type SessionStatsCardProps = {
   violations: number
   minutes: number
   emotionalState?: string | null
+  // El estado emocional califica al trader, así que su etiqueta concuerda con
+  // el género declarado. Lo recibe por prop en lugar de leer la sesión para
+  // que el componente siga siendo presentacional y usable desde servidor.
+  gender: Gender
   title?: string
   tooltipText?: string
   variant?: 'static' | 'live'
@@ -20,6 +25,7 @@ export function SessionStatsCard({
   violations,
   minutes,
   emotionalState,
+  gender,
   title = 'Resumen de la sesión',
   tooltipText = 'Datos generales de esta sesión de trading: operaciones realizadas, violaciones y duración.',
   variant = 'static',
@@ -75,7 +81,7 @@ export function SessionStatsCard({
               <p className={styles.label}>
                 Estado emocional:{' '}
                 <span className={styles.emotionValue}>
-                  {EMOTIONAL_STATE_LABELS[emotionalState as EmotionalState]?.label ?? emotionalState}
+                  {emotionalStateLabel(emotionalState as EmotionalState, gender) ?? emotionalState}
                 </span>
               </p>
             </div>

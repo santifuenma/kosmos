@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { capitalize, countSessionViolations } from '@/lib/utils'
+import { emotionalStateLabel } from '@/lib/gender'
+import type { EmotionalState } from '@/types'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { IcoCard } from '@/components/cards/IcoCard'
 import { MonthlyCalendar } from '@/components/cards/MonthlyCalendar'
@@ -241,14 +243,11 @@ export default async function HistoryPage({ searchParams }: Props) {
       const avg = icos.reduce((a, b) => a + b, 0) / icos.length
       if (avg > bestAvg) { bestAvg = avg; bestState = state }
     }
-    const stateLabels: Record<string, string> = {
-      NEUTRAL: 'Neutral',
-      ANXIOUS: 'Ansioso',
-      CONFIDENT: 'Confiado',
-      FRUSTRATED: 'Frustrado',
-      TIRED: 'Cansado',
-    }
-    insights.push(`Mejor rendimiento cuando tu estado emocional es <strong>${stateLabels[bestState] ?? bestState}</strong>.`)
+    // Antes había aquí un diccionario propio que además discrepaba del de
+    // @/types ("Neutral" frente a "Neutro"). Ahora la fuente es única y las
+    // etiquetas concuerdan con el género declarado por el usuario.
+    const label = emotionalStateLabel(bestState as EmotionalState, session.user.gender)
+    insights.push(`Mejor rendimiento cuando tu estado emocional es <strong>${label}</strong>.`)
   }
 
   // 5. ICO ↔ P&L correlation

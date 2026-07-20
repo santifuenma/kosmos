@@ -11,6 +11,7 @@ import {
   Tooltip,
   TooltipContentProps,
 } from 'recharts'
+import styles from './page.module.css'
 
 const COLOR_SUCCESS = '#53e46e'
 const COLOR_WARNING = '#ffd240'
@@ -138,11 +139,7 @@ export default function WeeklyChart({ data }: WeeklyChartProps) {
     }
 
   if (data.length === 0) {
-    return (
-      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.6)', padding: '20px 0' }}>
-        Sin sesiones este mes
-      </p>
-    )
+    return <p className={styles.emptyChart}>No hay sesiones registradas en este mes.</p>
   }
 
   return (

@@ -26,6 +26,14 @@ export type BehavioralRuleItem = {
   scope: 'PER_TRADE' | 'PER_SESSION'
 }
 
+// Respuesta de GET /api/catalog: el catálogo maestro sin vincular a ninguna
+// estrategia. Lo consume el onboarding, que necesita mostrar las reglas y
+// condiciones antes de que exista la estrategia del usuario en BD.
+export type CatalogResponse = {
+  conditions: EntryConditionItem[]
+  rules: BehavioralRuleItem[]
+}
+
 // ── Tablas intermedias de estrategia ────────────────────────────────────────
 
 // StrategyCondition: vínculo entre la estrategia del usuario y una condición
@@ -212,17 +220,13 @@ export type FeedbackResponse = {
 // rendimiento posterior de forma sistemática y comparable entre sesiones.
 export type EmotionalState = 'NEUTRAL' | 'ANXIOUS' | 'CONFIDENT' | 'FRUSTRATED' | 'TIRED'
 
-// Etiqueta legible de cada estado emocional. Se centraliza aquí para que
-// dashboard, formulario y resúmenes muestren siempre el mismo texto.
-// Los iconos visuales se gestionan por separado en cada vista (SVG en
-// session/new, caritas en components/icons) porque varían según el contexto.
-export const EMOTIONAL_STATE_LABELS: Record<EmotionalState, { label: string }> = {
-  NEUTRAL:    { label: 'Neutro' },
-  ANXIOUS:    { label: 'Ansioso' },
-  CONFIDENT:  { label: 'Confiado' },
-  FRUSTRATED: { label: 'Frustrado' },
-  TIRED:      { label: 'Cansado' },
-}
+// Las etiquetas legibles de cada estado viven en src/lib/gender.ts, no aquí:
+// califican al trader ("Ansioso" / "Ansiosa" / "Ansiedad") y por tanto dependen
+// del género que declaró al registrarse. Usa emotionalStateLabel(state, gender)
+// o emotionalStateOptions(gender) en lugar de un diccionario fijo.
+//
+// Los iconos se gestionan por separado en cada vista (SVG en session/new,
+// caritas en components/icons) porque varían según el contexto.
 
 // Resumen de sesión que se incluye dentro de TodayIntention.
 // Solo contiene los campos necesarios para saber el estado del día actual,

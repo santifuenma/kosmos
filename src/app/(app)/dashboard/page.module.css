@@ -290,6 +290,15 @@
   width: 100%;
 }
 
+/* Estado vacío del gráfico. Sigue la convención de vacíos de la app
+   (--text-disabled + cursiva), la misma que .emptyFeedback en historial,
+   .emptyText en sesión nueva y .toggleListEmpty en sesión activa. */
+.emptyChart {
+  color: var(--text-disabled);
+  font-style: italic;
+  padding: 20px 0;
+}
+
 
 
 /* ── 6. Calendar ────────────────────────────────────────────────────────── */

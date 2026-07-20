@@ -107,6 +107,57 @@
   color: var(--text-primary);
 }
 
+/* ── Aviso de cuenta sin confirmar ───────────────────────────────────────── */
+/* Tono de advertencia y no de error: las credenciales son correctas, solo
+   falta un paso. Rojo daría a entender que se ha equivocado al escribirlas. */
+
+.unverifiedBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 210, 64, 0.14);
+  border: 1px solid var(--color-warning-border);
+}
+
+.unverifiedText {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.unverifiedNotice {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.resendBtn {
+  width: 100%;
+  padding: 9px;
+  border-radius: var(--radius-md);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.resendBtn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.resendBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .submitBtn {
   width: 100%;
   padding: 12px;

@@ -89,7 +89,8 @@ svg {
 }
 
 input,
-textarea {
+textarea,
+select {
   color: var(--text-secondary);
   border-radius: var(--radius-md);
   background: #4c4c4c41;
@@ -105,7 +106,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: rgba(255, 255, 255, 0.35);
 }
 
@@ -113,6 +115,49 @@ input::placeholder,
 textarea::placeholder {
   color: var(--text-muted);
   opacity: 1;
+}
+
+/* ── Select ─────────────────────────────────────────────────────────────── */
+
+/* appearance: none quita el control nativo, que en Windows se pinta blanco con
+   texto negro e ignora los estilos de arriba. A cambio hay que dibujar la
+   flecha a mano: se incrusta como data URI para no depender de un fichero. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  /* Hueco a la derecha para que el texto no pise la flecha. */
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 16px 16px;
+}
+
+/* El desplegable abierto lo pinta el sistema operativo, no la página: sin esto
+   las opciones salen en texto claro sobre fondo claro en Windows. */
+select option {
+  background: #2a2a3a;
+  color: var(--text-primary);
+}
+
+/* ── Autorrelleno del navegador ─────────────────────────────────────────── */
+
+/* Chrome pinta un fondo azul claro propio sobre los campos autorrellenados y
+   no se puede sobrescribir con `background`. La transición larguísima es el
+   recurso habitual: el color de fondo del autorrelleno nunca llega a aplicarse,
+   así que el campo conserva su fondo translúcido. text-fill-color es necesario
+   aparte porque `color` tampoco tiene efecto en ese estado. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-secondary);
+  caret-color: var(--text-secondary);
+  transition: background-color 9999s ease-in-out 0s, border-color .15s;
 }
 
 /* Ocultar spinner de number inputs */

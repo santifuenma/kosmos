@@ -12,12 +12,14 @@
   padding: 16px;
 }
 
+/* Ritmo vertical más apretado que en login: este formulario tiene el doble de
+   campos y el objetivo es que quepa entero sin scroll en un portátil. */
 .card {
-  width: min(420px, 100%);
-  padding: 36px 32px;
+  width: min(430px, 100%);
+  padding: 26px 30px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .heading {
@@ -32,13 +34,13 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .label {
@@ -57,6 +59,41 @@
 
 .input {
   width: 100%;
+}
+
+/* Campos emparejados (nombre/apellido, contraseña/confirmación). Además de
+   leerse como una unidad, es lo que permite que el formulario entre completo
+   en pantalla sin scroll. En móvil se apilan (ver bloque responsive). */
+.fieldRow {
+  display: flex;
+  gap: 12px;
+}
+
+.fieldRow > .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: var(--text-disabled);
+  line-height: 1.4;
+}
+
+/* ── Pantalla de "revisa tu correo" ──────────────────────────────────────── */
+
+.successIcon {
+  width: 46px;
+  height: 46px;
+  color: var(--color-success);
+  margin: 4px auto 0;
+}
+
+.successText {
+  text-align: center;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 14px;
 }
 
 .passwordWrapper {
@@ -161,4 +198,44 @@
 
 .footerLink:hover {
   color: var(--text-primary);
+}
+
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+/* Pantallas bajas (portátiles de 13-14" con la barra del navegador, ventanas
+   no maximizadas). Se aprieta el ritmo y se encoge el logotipo solo aquí, para
+   no penalizar el diseño en monitores altos, donde hay sitio de sobra. */
+@media (max-height: 700px) {
+  .page {
+    padding: 8px;
+  }
+
+  .card {
+    padding: 18px 30px;
+    gap: 12px;
+  }
+
+  .form {
+    gap: 10px;
+  }
+
+  /* El logotipo lo pinta AuthLogo con su propio módulo, cuyas clases van
+     hasheadas: se llega a él por selector de elemento. */
+  .card img {
+    width: 240px;
+  }
+
+  .fieldHint {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Los pares lado a lado dejan campos demasiado estrechos para escribir
+     cómodamente en móvil. Aquí sí se apilan y la página hace scroll. */
+  .fieldRow {
+    flex-direction: column;
+    gap: 12px;
+  }
 }

@@ -100,7 +100,9 @@ export default async function DashboardPage() {
     }),
   ])
 
-  const userName = session.user.name ?? session.user.email ?? 'Trader'
+  // Solo el nombre de pila: el saludo es informal y el apellido sobra.
+  // El email es el respaldo si por lo que sea la sesión no trae nombre.
+  const userName = session.user.firstName || session.user.email || 'Trader'
   const todaySession = todayIntention?.session ?? null
 
   // ── Derived values ───────────────────────────────────────────────────────

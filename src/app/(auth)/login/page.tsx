@@ -24,10 +24,29 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Cuenta correcta pero sin confirmar: en vez del error genérico mostramos el
+  // motivo real y ofrecemos reenviar el correo.
+  const [unverified, setUnverified] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resendMessage, setResendMessage] = useState('')
+
+  async function handleResend() {
+    setResending(true)
+    const res = await fetch('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setResendMessage(data.message ?? 'Si esa cuenta existe, le hemos enviado un enlace nuevo.')
+    setResending(false)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setUnverified(false)
+    setResendMessage('')
     setLoading(true)
 
     // `redirect: false` evita que NextAuth haga una redirección de página
@@ -42,9 +61,16 @@ export default function LoginPage() {
     setLoading(false)
 
     if (result?.error) {
-      // No distinguimos entre "email no encontrado" y "contraseña incorrecta"
-      // intencionadamente: un mensaje genérico dificulta la enumeración de
-      // cuentas existentes a un posible atacante.
+      // authorize() solo lanza EMAIL_NOT_VERIFIED cuando la contraseña ya se ha
+      // validado, así que revelar el motivo aquí no permite enumerar cuentas:
+      // quien ve este mensaje ya conocía las credenciales.
+      if (result.error.includes('EMAIL_NOT_VERIFIED')) {
+        setUnverified(true)
+        return
+      }
+      // Para el resto no distinguimos entre "email no encontrado" y "contraseña
+      // incorrecta" intencionadamente: un mensaje genérico dificulta la
+      // enumeración de cuentas existentes a un posible atacante.
       setError('Email o contraseña incorrectos')
       return
     }
@@ -111,6 +137,28 @@ export default function LoginPage() {
               <AlertIcon className={styles.errorIcon} />
               {error}
             </p>
+          )}
+
+          {/* Credenciales correctas pero cuenta sin confirmar */}
+          {unverified && (
+            <div className={styles.unverifiedBox} role="alert">
+              <p className={styles.unverifiedText}>
+                Tu cuenta todavía no está confirmada. Revisa tu correo y pulsa el
+                enlace que te enviamos.
+              </p>
+              {resendMessage ? (
+                <p className={styles.unverifiedNotice}>{resendMessage}</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className={styles.resendBtn}
+                >
+                  {resending ? 'Enviando...' : 'Reenviarme el enlace'}
+                </button>
+              )}
+            </div>
           )}
 
           <button

@@ -34,7 +34,24 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique          // Identificador único de cuenta; se usa para el login
   password  String                    // Hash bcrypt; nunca se almacena en texto plano
-  name      String?                   // Nombre visible en la UI; opcional en el registro
+
+  // Nombre y apellido separados: la interfaz se dirige al trader solo por el
+  // nombre ("Hola, Santiago"), mientras que el apellido queda para contextos
+  // formales. Guardarlos juntos obligaría a partir la cadena en cada uso.
+  firstName String
+  lastName  String
+
+  // Género declarado en el registro. Determina la concordancia gramatical de
+  // los textos que se refieren al usuario (estados emocionales, bienvenida).
+  // Valores: "MALE" | "FEMALE" | "OTHER" | "UNDISCLOSED"
+  // OTHER y UNDISCLOSED comparten redacción: formas neutras sin marca de género.
+  gender    String   @default("UNDISCLOSED")
+
+  // Momento en que el usuario confirmó su correo pulsando el enlace recibido.
+  // Mientras sea null no puede iniciar sesión: evita cuentas con direcciones
+  // inexistentes o ajenas. Es DateTime? y no Boolean para conservar cuándo.
+  emailVerified DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -44,6 +61,30 @@ model User {
   dailyIntention DailyIntention[]
   // Las sesiones agrupan los trades de un día concreto
   sessions       Session[]
+  // Tokens de confirmación de correo emitidos para esta cuenta
+  verificationTokens VerificationToken[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VERIFICACIÓN DE CORREO
+// ─────────────────────────────────────────────────────────────────────────────
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  // Valor aleatorio que viaja en el enlace del correo. @unique porque es el
+  // criterio de búsqueda al validar y no puede repetirse entre cuentas.
+  token     String   @unique
+  // Los tokens caducan para que un correo antiguo reenviado o filtrado no sirva
+  // indefinidamente. Al validar se comprueba expiresAt antes que nada.
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Al pedir un reenvío se borran los tokens previos del usuario, así que este
+  // índice acelera tanto esa limpieza como la purga de tokens caducados.
+  @@index([userId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

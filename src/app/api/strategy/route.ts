@@ -61,11 +61,17 @@ export async function GET() {
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/strategy
 // Crea la estrategia del usuario y la vincula automáticamente con TODO el
-// catálogo (condiciones y reglas) en estado inactivo.
+// catálogo (condiciones y reglas).
 //
 // Los límites operativos son opcionales en la creación: si no se envían se
 // usan los defaults del schema (3 trades, 09:00–11:30). Esto permite crear
 // una estrategia rápidamente y ajustar los límites después.
+//
+// activeConditionIds / activeRuleIds son opcionales y contienen ids del
+// catálogo (EntryCondition.id / BehavioralRule.id) que deben quedar activos.
+// Si se omiten, todo el catálogo se vincula inactivo y el usuario lo activa
+// después desde la página de estrategia. El onboarding sí los envía, para que
+// el trader termine con una estrategia que ya mide el ICO desde el primer día.
 // ─────────────────────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -86,8 +92,10 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { name, description, maxTrades, tradingHoursStart, tradingHoursEnd } =
-    await request.json()
+  const {
+    name, description, maxTrades, tradingHoursStart, tradingHoursEnd,
+    activeConditionIds, activeRuleIds,
+  } = await request.json()
 
   if (!name?.trim()) {
     return NextResponse.json(
@@ -127,12 +135,30 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  if (activeConditionIds !== undefined && !Array.isArray(activeConditionIds)) {
+    return NextResponse.json(
+      { error: 'activeConditionIds debe ser un array de ids' },
+      { status: 400 },
+    )
+  }
+  if (activeRuleIds !== undefined && !Array.isArray(activeRuleIds)) {
+    return NextResponse.json(
+      { error: 'activeRuleIds debe ser un array de ids' },
+      { status: 400 },
+    )
+  }
+
   // Obtenemos el catálogo completo antes de la transacción de creación.
   // Usamos Promise.all para hacer las dos queries en paralelo y reducir latencia.
   const [allConditions, allRules] = await Promise.all([
     prisma.entryCondition.findMany(),
     prisma.behavioralRule.findMany(),
   ])
+
+  // Sets para resolver isActive en O(1) al mapear el catálogo. Los ids que
+  // lleguen y no existan en el catálogo se ignoran solos: nunca se consultan.
+  const activeConditions = new Set<string>(activeConditionIds ?? [])
+  const activeRules = new Set<string>(activeRuleIds ?? [])
 
   const strategy = await prisma.strategy.create({
     data: {
@@ -149,13 +175,13 @@ export async function POST(request: NextRequest) {
       conditions: {
         create: allConditions.map((c) => ({
           conditionId: c.id,
-          isActive: false,
+          isActive: activeConditions.has(c.id),
         })),
       },
       rules: {
         create: allRules.map((r) => ({
           ruleId: r.id,
-          isActive: false,
+          isActive: activeRules.has(r.id),
         })),
       },
     },

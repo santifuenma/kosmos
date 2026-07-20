@@ -1,0 +1,545 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   OnboardingFlow — estilos locales (CSS Module).
+
+   El modal replica deliberadamente las medidas del modal de registro de trade
+   (src/app/(app)/session/active/page.module.css, sección 9) para que ambos se
+   perciban como la misma pieza: mismo panel translúcido, mismos divisores,
+   mismos botones de 180×42 y el mismo interruptor de 36×20.
+
+   Estructura del archivo:
+     1. Animaciones
+     2. Pantalla de bienvenida
+     3. Overlay + panel del modal
+     4. Cabecera y divisores
+     5. Campos (paso 1)
+     6. Listas con interruptor (paso 2)
+     7. Footer
+     8. Estados
+     9. Responsive
+   ────────────────────────────────────────────────────────────────────────── */
+
+
+/* ── 1. Animaciones ────────────────────────────────────────────────────── */
+
+@keyframes welcomeEnter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes overlayFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes modalPopIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes modalPopOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 0; transform: scale(0.92) translateY(12px); }
+}
+
+@keyframes stepSlideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes stepSlideBack {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+
+/* ── 2. Pantalla de bienvenida ─────────────────────────────────────────── */
+
+.screen {
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
+  max-width: 760px;
+  width: 100%;
+  animation: welcomeEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Mientras el modal está abierto la bienvenida se oculta en lugar de
+   desmontarse: al cerrarlo vuelve a aparecer sin recolocar nada.
+   Va a opacity 0 y no a un valor intermedio a propósito. El panel del modal
+   es translúcido y su backdrop-filter no puede difuminar lo que hay detrás:
+   el .overlay ya declara backdrop-filter y eso lo convierte en backdrop root
+   de sus descendientes, así que el blur del panel solo ve el propio overlay.
+   Con el logotipo a 600px cualquier resto se leía a través del panel. */
+.welcomeDimmed {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease-out;
+}
+
+/* Antetítulo: el logotipo es la pieza principal, así que este va por debajo
+   en tamaño y en contraste. */
+.eyebrow {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  font-size: clamp(18px, 2.4vw, 30px);
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+/* El logotipo es un SVG único (anillo + estrella + wordmark), no piezas
+   posicionadas a mano: escala sin descuadrarse a ningún ancho. */
+.logo {
+  width: clamp(260px, 55vw, 620px);
+  height: auto;
+}
+
+.tagline {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
+  font-size: clamp(15px, 1.8vw, 22px);
+  line-height: 1.55;
+  letter-spacing: 0.3px;
+  color: var(--text-secondary);
+  max-width: 30ch;
+}
+
+.startBtn {
+  margin-top: 10px;
+}
+
+.requiredNote {
+  font-size: clamp(12px, 1.1vw, 13px);
+  color: var(--text-disabled);
+  max-width: 44ch;
+}
+
+
+/* ── 3. Overlay + panel del modal ──────────────────────────────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 20px;
+  animation: overlayFadeIn 0.25s ease-out;
+}
+
+.overlayClosing {
+  animation: overlayFadeOut 0.2s ease-in forwards;
+}
+
+.modalPanel {
+  width: 100%;
+  max-width: 620px;
+  height: 570px;
+  max-height: 90vh;
+  background: rgba(214, 214, 214, 0.286);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  padding: 18px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  animation: modalPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modalPanelStep1 {
+  gap: 18px;
+}
+
+.modalClosing {
+  animation: modalPopOut 0.2s ease-in forwards;
+}
+
+.stepForward {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  animation: stepSlideIn 0.25s ease-out;
+}
+
+.stepBackward {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+  animation: stepSlideBack 0.25s ease-out;
+}
+
+
+/* ── 4. Cabecera y divisores ───────────────────────────────────────────── */
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.modalTitle {
+  font-weight: 500;
+  text-align: center;
+}
+
+.modalClose {
+  position: absolute;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  color: var(--text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.modalClose:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.modalClose svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Indicador de progreso: el usuario sabe cuánto le queda antes de empezar. */
+.stepCounter {
+  position: absolute;
+  right: 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(11px, 1.1vw, 12px);
+  font-weight: 400;
+  color: var(--text-disabled);
+  white-space: nowrap;
+}
+
+.modalSubtitle {
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: clamp(13px, 1.3vw, 14px);
+}
+
+.modalDivider {
+  flex-shrink: 0;
+  height: 1px;
+  background: rgba(207, 207, 207, 0.266);
+}
+
+
+/* ── 5. Campos (paso 1) ────────────────────────────────────────────────── */
+
+.fieldRow {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+}
+
+.fieldCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-secondary);
+  font-size: clamp(12px, 1.2vw, 13px);
+  font-weight: 400;
+  margin-bottom: 6px;
+}
+
+.sectionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-secondary);
+  font-size: clamp(13px, 1.3vw, 14px);
+  font-weight: 400;
+}
+
+.optional {
+  font-weight: 300;
+  opacity: 0.6;
+}
+
+.modalInput,
+.modalTextarea {
+  width: 100%;
+  background: rgba(37, 37, 37, 0.307);
+}
+
+.modalTextarea {
+  min-height: 74px;
+}
+
+.limitsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+
+/* ── 6. Listas con interruptor (paso 2) ────────────────────────────────── */
+
+.cumplimientoRow {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.cumplimientoCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Cabeceras de las dos columnas del paso 2, centradas sobre su lista.
+   Va scopeado aquí y no en .sectionLabel porque en el paso 1 esa misma clase
+   titula "Límites operativos", que debe seguir alineada con sus campos. */
+.cumplimientoCol > .sectionLabel {
+  justify-content: center;
+}
+
+.toggleList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(37, 37, 37, 0.307);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  min-height: 140px;
+  overflow-y: auto;
+}
+
+/* Separador de scope (Por operación / Por sesión) dentro de la lista. */
+.groupLabel {
+  font-size: clamp(10px, 1vw, 11px);
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+  padding: 4px 6px 0;
+}
+
+.groupLabel:not(:first-child) {
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 6px;
+}
+
+.toggleRowLabel {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  font-size: clamp(12px, 1.2vw, 13px);
+  color: var(--text-primary);
+}
+
+.toggle {
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  border-radius: 100px;
+  background: var(--glass-raised);
+  border: 1px solid rgba(255, 255, 255, 0.21);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  padding: 0;
+}
+
+.toggleActive {
+  background: var(--color-success);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid rgba(255, 255, 255, 0);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s;
+}
+
+.toggleThumbOn {
+  transform: translateX(16px);
+}
+
+
+/* ── 7. Footer ─────────────────────────────────────────────────────────── */
+
+.modalFooter {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+}
+
+.modalFooterDouble {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.modalNextBtn,
+.modalBackBtn,
+.modalSubmitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 180px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: clamp(13px, 1.3vw, 14px);
+  color: var(--text-primary);
+  background: var(--glass-raised);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: var(--shadow-button);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.modalNextBtn:hover,
+.modalBackBtn:hover,
+.modalSubmitBtn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.modalNextBtn:active,
+.modalBackBtn:active,
+.modalSubmitBtn:active {
+  transform: scale(0.98);
+}
+
+.modalNextBtn:disabled,
+.modalBackBtn:disabled,
+.modalSubmitBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.modalNextBtn svg,
+.modalBackBtn svg,
+.modalSubmitBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+
+/* ── 8. Estados ────────────────────────────────────────────────────────── */
+
+.errorText {
+  color: var(--color-danger-text);
+  font-size: clamp(12px, 1.2vw, 13px);
+  text-align: center;
+}
+
+.hintText {
+  color: var(--text-muted);
+  font-size: clamp(11px, 1.1vw, 12px);
+  text-align: center;
+}
+
+.loadingText {
+  color: var(--text-muted);
+  font-size: clamp(12px, 1.2vw, 13px);
+  text-align: center;
+  padding: 24px 0;
+}
+
+
+/* ── 9. Responsive ─────────────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+  .screen {
+    padding: 32px 18px;
+  }
+
+  /* En móvil las tres columnas de límites no caben: máx. operaciones ocupa
+     la fila y las dos horas se reparten la siguiente. */
+  .fieldRow {
+    flex-wrap: wrap;
+  }
+
+  .fieldRow > .fieldCol:first-child {
+    flex-basis: 100%;
+  }
+
+  /* Reglas y condiciones pasan a apilarse; el panel crece y hace scroll. */
+  .cumplimientoRow {
+    flex-direction: column;
+  }
+
+  .modalPanel {
+    height: auto;
+    max-height: 92vh;
+    padding: 16px 16px 18px;
+  }
+
+  .modalFooterDouble {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .modalNextBtn,
+  .modalBackBtn,
+  .modalSubmitBtn {
+    width: 100%;
+  }
+
+  /* El contador de paso chocaría con el título en pantallas estrechas. */
+  .stepCounter {
+    display: none;
+  }
+}

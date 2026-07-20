@@ -45,9 +45,14 @@ export default withAuth(
         // Las páginas de auth y los endpoints de NextAuth/registro son públicos.
         // Si no los excluimos aquí, los usuarios no autenticados no podrían
         // ni siquiera acceder a /login para introducir sus credenciales.
+        //
+        // /verify va en la lista porque es el destino del enlace de confirmación
+        // del correo: por definición quien lo abre todavía no puede autenticarse,
+        // así que exigirle sesión haría imposible confirmar la cuenta.
         if (
           pathname === '/login' ||
           pathname === '/register' ||
+          pathname === '/verify' ||
           pathname.startsWith('/api/auth')
         ) {
           return true

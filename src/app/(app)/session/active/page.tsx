@@ -35,7 +35,8 @@ import type {
   TradeResult,
   EmotionalState,
 } from '@/types'
-import { EMOTIONAL_STATE_LABELS } from '@/types'
+import { useSession } from 'next-auth/react'
+import { emotionalStateLabel } from '@/lib/gender'
 import { getDailyTip } from '@/lib/dailyTips'
 import { capitalize } from '@/lib/utils'
 import styles from './page.module.css'
@@ -48,6 +49,11 @@ function getTodayDisplay(): string {
 
 export default function ActiveSessionPage() {
   const router = useRouter()
+
+  // Género declarado en el registro: concuerda la etiqueta del estado
+  // emocional. UNDISCLOSED mientras carga la sesión, por ser la forma sin
+  // marca de género (ver src/lib/gender.ts).
+  const { data: authSession } = useSession()
 
   // ── Datos principales ────────────────────────────────────────────────────
   const [sessionData, setSessionData] = useState<ActiveSessionData | null>(null)
@@ -335,8 +341,12 @@ export default function ActiveSessionPage() {
 
   if (!sessionData || !strategyData) return null
 
-  const emotionInfo =
-    EMOTIONAL_STATE_LABELS[sessionData.intention.emotionalState as EmotionalState]
+  const emotionInfo = {
+    label: emotionalStateLabel(
+      sessionData.intention.emotionalState as EmotionalState,
+      authSession?.user?.gender ?? 'UNDISCLOSED',
+    ),
+  }
 
   // Tip del día (determinista, definido en lib/dailyTips).
   const dailyTip = getDailyTip()
@@ -443,6 +453,7 @@ export default function ActiveSessionPage() {
               maxTrades={maxTrades}
               violations={totalViolations}
               minutes={minutesInSession}
+              gender={authSession?.user?.gender ?? 'UNDISCLOSED'}
               title="Estado de la sesión"
               tooltipText="Métricas en tiempo real de tu sesión: trades realizados, violaciones cometidas y minutos transcurridos desde el inicio."
               variant="live"
