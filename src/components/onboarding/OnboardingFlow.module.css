@@ -129,6 +129,28 @@
   max-width: 44ch;
 }
 
+/* Enlace de cerrar sesión: mismo tratamiento que .footerLink de login/registro
+   (texto subrayado que cambia de color al pasar por encima). Va como <button>
+   porque dispara signOut, no navega, pero se ve como un enlace. */
+.logoutLink {
+  margin-top: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.logoutLink:hover {
+  color: var(--text-primary);
+}
+
 
 /* ── 3. Overlay + panel del modal ──────────────────────────────────────── */
 

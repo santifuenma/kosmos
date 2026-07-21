@@ -1,23 +1,26 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// email.ts — envío de correo transaccional a través de Resend.
+// email.ts — envío de correo transaccional a través de Brevo.
 //
-// Usamos la API HTTP de Resend con fetch en lugar de su SDK: es una única
+// Usamos la API HTTP de Brevo con fetch en lugar de su SDK: es una única
 // petición POST y así evitamos añadir una dependencia más al proyecto.
 //
-// Si RESEND_API_KEY no está configurada, en lugar de fallar se imprime el
+// Elegimos Brevo porque permite verificar un ÚNICO remitente (tu propio correo)
+// en lugar de un dominio completo: así se puede enviar a cualquier destinatario
+// sin ser dueño de un dominio. El correo del remitente tiene que estar dado de
+// alta y verificado en Brevo (Senders & IP), y su dirección va en BREVO_FROM_EMAIL.
+//
+// Si BREVO_API_KEY no está configurada, en lugar de fallar se imprime el
 // contenido por consola. Esto permite probar el registro y la verificación de
-// extremo a extremo en local sin cuenta de Resend: el enlace aparece en el log
+// extremo a extremo en local sin cuenta de Brevo: el enlace aparece en el log
 // del servidor y basta con pegarlo en el navegador. En producción la ausencia
 // de la clave sí se considera un error, porque ahí nadie lee los logs a tiempo.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const RESEND_ENDPOINT = 'https://api.resend.com/emails'
+const BREVO_ENDPOINT = 'https://api.brevo.com/v3/smtp/email'
 
-// Remitente por defecto. onboarding@resend.dev es el dominio de pruebas de
-// Resend: funciona sin configurar DNS, pero solo entrega correos a la dirección
-// con la que se registró la cuenta. Para enviar a cualquier destinatario hay
-// que verificar un dominio propio y ponerlo en RESEND_FROM.
-const DEFAULT_FROM = 'Kosmos <onboarding@resend.dev>'
+// Nombre visible del remitente. La dirección (obligatoria y verificada en
+// Brevo) viene de BREVO_FROM_EMAIL; sin ella no se puede enviar.
+const DEFAULT_FROM_NAME = 'Kosmos'
 
 type SendEmailArgs = {
   to: string
@@ -28,42 +31,49 @@ type SendEmailArgs = {
 }
 
 export async function sendEmail({ to, subject, html, text }: SendEmailArgs): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY
+  const apiKey = process.env.BREVO_API_KEY
+  const fromEmail = process.env.BREVO_FROM_EMAIL
+  const fromName = process.env.BREVO_FROM_NAME ?? DEFAULT_FROM_NAME
 
   if (!apiKey) {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('RESEND_API_KEY no está configurada: no se puede enviar el correo')
+      throw new Error('BREVO_API_KEY no está configurada: no se puede enviar el correo')
     }
     console.info(
-      `\n──────── CORREO (modo desarrollo, sin RESEND_API_KEY) ────────\n` +
+      `\n──────── CORREO (modo desarrollo, sin BREVO_API_KEY) ────────\n` +
       `Para:    ${to}\n` +
       `Asunto:  ${subject}\n\n` +
       `${text}\n` +
-      `──────────────────────────────────────────────────────────────\n`,
+      `─────────────────────────────────────────────────────────────\n`,
     )
     return
   }
 
-  const res = await fetch(RESEND_ENDPOINT, {
+  if (!fromEmail) {
+    throw new Error('BREVO_FROM_EMAIL no está configurada: Brevo necesita un remitente verificado')
+  }
+
+  const res = await fetch(BREVO_ENDPOINT, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      'api-key': apiKey,
       'Content-Type': 'application/json',
+      accept: 'application/json',
     },
     body: JSON.stringify({
-      from: process.env.RESEND_FROM ?? DEFAULT_FROM,
-      to: [to],
+      sender: { name: fromName, email: fromEmail },
+      to: [{ email: to }],
       subject,
-      html,
-      text,
+      htmlContent: html,
+      textContent: text,
     }),
   })
 
   if (!res.ok) {
-    // El cuerpo de error de Resend explica la causa (dominio sin verificar,
-    // clave inválida, destinatario no permitido en el dominio de pruebas...).
+    // El cuerpo de error de Brevo explica la causa (remitente sin verificar,
+    // clave inválida, cuota agotada...).
     const detail = await res.text().catch(() => '')
-    throw new Error(`Resend respondió ${res.status}: ${detail}`)
+    throw new Error(`Brevo respondió ${res.status}: ${detail}`)
   }
 }
 

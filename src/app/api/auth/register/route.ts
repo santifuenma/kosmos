@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     // El envío va después de crear la cuenta y fuera del try principal de la
     // creación: si el proveedor de correo falla, el usuario ya está registrado
     // y puede pedir el reenvío desde la pantalla de login. Perder la cuenta por
-    // una caída de Resend sería peor que entregar el correo con retraso.
+    // una caída del proveedor de correo sería peor que entregarlo con retraso.
     try {
       await sendVerificationEmail(user.id, user.email, user.firstName)
     } catch (err) {

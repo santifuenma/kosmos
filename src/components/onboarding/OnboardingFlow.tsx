@@ -22,7 +22,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import Image from 'next/image'
 import { welcomeLabel } from '@/lib/gender'
 import type { CatalogResponse, BehavioralRuleItem, EntryConditionItem } from '@/types'
@@ -215,6 +215,18 @@ function WelcomeScreen({ onStart, dimmed }: { onStart: () => void; dimmed: boole
       <p className={styles.requiredNote}>
         Necesitamos tu estrategia para poder medir tu coherencia. Solo se hace una vez.
       </p>
+
+      {/* Salida del onboarding: el usuario ya está autenticado y sin esto no
+          tendría forma de cerrar sesión antes de crear su estrategia (aquí no
+          hay Navbar todavía). Mismo estilo de enlace subrayado que el "Inicia
+          sesión / Regístrate" de los formularios de auth. */}
+      <button
+        type="button"
+        onClick={() => signOut({ callbackUrl: '/login' })}
+        className={styles.logoutLink}
+      >
+        Cerrar sesión
+      </button>
     </div>
   )
 }
