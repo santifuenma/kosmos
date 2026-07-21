@@ -50,3 +50,6 @@ prisma/*.db-journal
 
 # Claude Code local config and worktree metadata
 .claude/
+
+# Previsualización del correo generada para depuración; no es código
+email-preview.html
