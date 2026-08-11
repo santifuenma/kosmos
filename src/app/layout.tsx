@@ -9,7 +9,7 @@
 // ya está logueado y redirigirle al dashboard.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import SessionProvider from '@/components/layout/SessionProvider'
@@ -29,6 +29,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Kosmos',
   description: 'Plataforma de análisis conductual para traders',
+}
+
+// viewportFit: 'cover' — deja que el fondo (body::before, fixed + inset:0)
+// se extienda bajo el notch/status bar en iOS en vez de cortarse ahí, que
+// es lo que dejaba ver el background-color plano de <body> como una franja
+// separada del degradado.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
