@@ -690,3 +690,228 @@
 
 
 }
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   11. Add custom item (regla/condición) — botón + modal.
+
+   El botón reutiliza el look de .itemRow (misma tarjeta que las reglas y
+   condiciones existentes). El modal reutiliza el mismo patrón visual que el
+   modal de registro de trades de /session/active (overlay, panel de cristal,
+   header con título centrado + cierre en X, divider, footer con botón).
+   ────────────────────────────────────────────────────────────────────────── */
+
+.addItemRow {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 15px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.addItemRow:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.addItemRow:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.addItemLabel {
+  color: var(--text-primary);
+  font-weight: 400;
+  font-size: clamp(13px, 1.5vw, 14px);
+}
+
+.addItemIcon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.addItemIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Modal ─────────────────────────────────────────────────────────────── */
+
+@keyframes addModalOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes addModalOverlayOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes addModalPanelIn {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes addModalPanelOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 0; transform: scale(0.92) translateY(12px); }
+}
+
+.addModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  padding: 20px;
+  animation: addModalOverlayIn 0.25s ease-out;
+}
+
+.addModalOverlayClosing {
+  animation: addModalOverlayOut 0.2s ease-in forwards;
+}
+
+.addModalPanel {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  min-height: 380px;
+  max-height: 90vh;
+  background: rgba(214, 214, 214, 0.286);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  padding: 18px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  animation: addModalPanelIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.addModalPanelClosing {
+  animation: addModalPanelOut 0.2s ease-in forwards;
+}
+
+.addModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.addModalTitle {
+  font-weight: 500;
+  text-align: center;
+}
+
+.addModalClose {
+  position: absolute;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  color: var(--text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.addModalClose:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.addModalClose svg {
+  width: 18px;
+  height: 18px;
+}
+
+.addModalDivider {
+  flex-shrink: 0;
+  height: 1px;
+  background: rgba(207, 207, 207, 0.266);
+}
+
+.addModalField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.addModalFieldLabel {
+  color: var(--text-secondary);
+  font-size: clamp(12px, 1.2vw, 13px);
+  font-weight: 400;
+}
+
+.addModalInput {
+  width: 100%;
+  background: rgba(37, 37, 37, 0.307);
+}
+
+.addModalTextarea {
+  width: 100%;
+  min-height: 80px;
+  background: rgba(37, 37, 37, 0.307);
+}
+
+.addModalFooter {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+}
+
+.addModalSubmitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 220px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: clamp(13px, 1.3vw, 14px);
+  color: var(--text-primary);
+  background: var(--glass-raised);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: var(--shadow-button);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.addModalSubmitBtn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.addModalSubmitBtn:active {
+  transform: scale(0.98);
+}
+
+.addModalSubmitBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.addModalSubmitBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 700px) {
+  .addModalPanel {
+    padding: 16px;
+    max-height: 95vh;
+  }
+}

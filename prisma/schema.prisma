@@ -63,6 +63,10 @@ model User {
   sessions       Session[]
   // Tokens de confirmación de correo emitidos para esta cuenta
   verificationTokens VerificationToken[]
+  // Condiciones y reglas personalizadas que el usuario añadió a su estrategia
+  // (catálogo privado, no visible para otros usuarios)
+  customConditions EntryCondition[]
+  customRules      BehavioralRule[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -133,9 +137,16 @@ model EntryCondition {
   label       String
   // Explicación completa de qué debe cumplirse para que esta condición sea válida
   description String
+  // true si la creó un trader desde su estrategia (no viene del catálogo del sistema).
+  // Las condiciones personalizadas son privadas: solo se vinculan a estrategias
+  // de su propio autor, nunca se ofrecen a otros usuarios ni en el onboarding.
+  isCustom    Boolean @default(false)
+  // Autor de una condición personalizada. Null para el catálogo del sistema.
+  userId      String?
 
   // Relaciones: cada condición puede estar en múltiples estrategias y
   // puede ser objeto de violaciones en trades concretos
+  user               User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   strategyConditions StrategyCondition[]
   tradeViolations    TradeViolation[]
 }
@@ -148,7 +159,14 @@ model BehavioralRule {
   // "PER_TRADE": se evalúa en cada operación individual (ej: "No mover el SL")
   // "PER_SESSION": se evalúa una vez al cerrar la sesión (ej: "No hacer revenge trading")
   scope       String
+  // true si la creó un trader desde su estrategia (no viene del catálogo del sistema).
+  // Las reglas personalizadas son privadas: solo se vinculan a estrategias de
+  // su propio autor, nunca se ofrecen a otros usuarios ni en el onboarding.
+  isCustom    Boolean @default(false)
+  // Autor de una regla personalizada. Null para el catálogo del sistema.
+  userId      String?
 
+  user               User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
   strategyRules      StrategyRule[]
   tradeViolations    TradeViolation[]
   sessionViolations  SessionViolation[]

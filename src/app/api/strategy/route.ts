@@ -148,11 +148,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Obtenemos el catálogo completo antes de la transacción de creación.
+  // Obtenemos el catálogo del sistema antes de la transacción de creación.
   // Usamos Promise.all para hacer las dos queries en paralelo y reducir latencia.
+  // isCustom: false excluye las condiciones/reglas personalizadas de otros
+  // usuarios: son privadas y nunca se vinculan a una estrategia ajena.
   const [allConditions, allRules] = await Promise.all([
-    prisma.entryCondition.findMany(),
-    prisma.behavioralRule.findMany(),
+    prisma.entryCondition.findMany({ where: { isCustom: false } }),
+    prisma.behavioralRule.findMany({ where: { isCustom: false } }),
   ])
 
   // Sets para resolver isActive en O(1) al mapear el catálogo. Los ids que

@@ -8,15 +8,18 @@
 
 // ── Catálogos del sistema ────────────────────────────────────────────────────
 
-// Una condición de entrada del catálogo predefinido (ej: "Tendencia Confirmada")
+// Una condición de entrada del catálogo predefinido (ej: "Tendencia Confirmada"),
+// o una condición personalizada añadida por el propio usuario (isCustom: true)
 export type EntryConditionItem = {
   id: string
   code: string
   label: string
   description: string
+  isCustom: boolean
 }
 
-// Una regla conductual del catálogo predefinido (ej: "Mantener SL")
+// Una regla conductual del catálogo predefinido (ej: "Mantener SL"), o una
+// regla personalizada añadida por el propio usuario (isCustom: true)
 // El scope distingue si se evalúa por operación o una vez por sesión
 export type BehavioralRuleItem = {
   id: string
@@ -24,6 +27,7 @@ export type BehavioralRuleItem = {
   label: string
   description: string
   scope: 'PER_TRADE' | 'PER_SESSION'
+  isCustom: boolean
 }
 
 // Respuesta de GET /api/catalog: el catálogo maestro sin vincular a ninguna

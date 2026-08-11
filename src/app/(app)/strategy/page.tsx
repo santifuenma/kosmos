@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { StrategyWithRelations, StrategyConditionItem, StrategyRuleItem } from '@/types'
 import { capitalize } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { EditIcon, CheckIcon, CancelIcon, InfoIcon, LockIcon } from '@/components/icons'
+import { EditIcon, CheckIcon, CancelIcon, InfoIcon, LockIcon, CloseIcon, PlusIcon } from '@/components/icons'
 import styles from './page.module.css'
 
 // ── Helpers de formato de fecha ──────────────────────────────────────────────
@@ -257,6 +257,8 @@ function ManageStrategyView({
   hasOpenSession: boolean
 }) {
   const [editing, setEditing] = useState(false)
+  const [showAddRule, setShowAddRule] = useState(false)
+  const [showAddCondition, setShowAddCondition] = useState(false)
   const activeConditions = strategy.conditions.filter((c) => c.isActive).length
   const activeRules = strategy.rules.filter((r) => r.isActive).length
   const perTradeRules = strategy.rules.filter((r) => r.rule.scope === 'PER_TRADE')
@@ -318,6 +320,16 @@ function ManageStrategyView({
           <div className={styles.cardDivider} />
 
           <div className={styles.itemList}>
+            <button
+              type="button"
+              onClick={() => setShowAddRule(true)}
+              disabled={hasOpenSession}
+              className={`${styles.itemRow} ${styles.addItemRow}`}
+            >
+              <span className={styles.addItemLabel}>Agregar regla personalizada</span>
+              <span className={styles.addItemIcon}><PlusIcon /></span>
+            </button>
+
             {perTradeRules.length > 0 && (
               <>
                 <h3 className={styles.ruleGroupLabel}>Por Operación</h3>
@@ -373,6 +385,16 @@ function ManageStrategyView({
           <div className={styles.cardDivider} />
 
           <div className={styles.itemList}>
+            <button
+              type="button"
+              onClick={() => setShowAddCondition(true)}
+              disabled={hasOpenSession}
+              className={`${styles.itemRow} ${styles.addItemRow}`}
+            >
+              <span className={styles.addItemLabel}>Agregar condición personalizada</span>
+              <span className={styles.addItemIcon}><PlusIcon /></span>
+            </button>
+
             {strategy.conditions.map((sc) => (
               <ConditionRow
                 key={sc.id}
@@ -389,6 +411,28 @@ function ManageStrategyView({
           </div>
         </div>
       </div>
+
+      {showAddRule && (
+        <AddCustomItemModal<StrategyRuleItem>
+          kind="rule"
+          onClose={() => setShowAddRule(false)}
+          onCreated={(created) => {
+            onUpdate({ ...strategy, rules: [...strategy.rules, created] })
+            setShowAddRule(false)
+          }}
+        />
+      )}
+
+      {showAddCondition && (
+        <AddCustomItemModal<StrategyConditionItem>
+          kind="condition"
+          onClose={() => setShowAddCondition(false)}
+          onCreated={(created) => {
+            onUpdate({ ...strategy, conditions: [...strategy.conditions, created] })
+            setShowAddCondition(false)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -795,6 +839,117 @@ function RuleRow({
         <p className={styles.itemDescription}>{item.rule.description}</p>
       </div>
       <Toggle isActive={isActive} onToggle={handleToggle} disabled={locked} />
+    </div>
+  )
+}
+
+// ── AddCustomItemModal ──────────────────────────────────────────────────────
+// Modal para crear una regla o condición personalizada. Mismo patrón visual
+// que el modal de registro de trades de /session/active: overlay + panel de
+// cristal, header con título centrado y cierre en X, divider, campos y un
+// botón de envío centrado en el footer.
+//
+// Solo pide título y descripción (sin elegir scope ni tipo): el backend crea
+// la regla/condición como personalizada (isCustom: true), activa por defecto,
+// y la vincula de inmediato a la estrategia del usuario.
+
+function AddCustomItemModal<T extends StrategyRuleItem | StrategyConditionItem>({
+  kind,
+  onCreated,
+  onClose,
+}: {
+  kind: 'rule' | 'condition'
+  onCreated: (item: T) => void
+  onClose: () => void
+}) {
+  const [label, setLabel] = useState('')
+  const [description, setDescription] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [closing, setClosing] = useState(false)
+
+  const isRule = kind === 'rule'
+  const title = isRule ? 'Nueva regla personalizada' : 'Nueva condición personalizada'
+  const endpoint = isRule ? '/api/strategy/rules' : '/api/strategy/conditions'
+  const canSubmit = label.trim() !== '' && description.trim() !== '' && !submitting
+
+  function handleClose() {
+    if (submitting) return
+    setClosing(true)
+  }
+
+  async function handleSubmit() {
+    if (!canSubmit) return
+    setSubmitting(true)
+    setError('')
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label, description }),
+    })
+
+    if (!res.ok) {
+      const data = await res.json()
+      setError(data.error ?? 'Error al crear')
+      setSubmitting(false)
+      return
+    }
+
+    const created: T = await res.json()
+    onCreated(created)
+  }
+
+  return (
+    <div className={closing ? `${styles.addModalOverlay} ${styles.addModalOverlayClosing}` : styles.addModalOverlay}>
+      <div
+        className={closing ? `${styles.addModalPanel} ${styles.addModalPanelClosing}` : styles.addModalPanel}
+        onAnimationEnd={(e) => {
+          if (closing && e.currentTarget === e.target) onClose()
+        }}
+      >
+        <div className={styles.addModalHeader}>
+          <button onClick={handleClose} className={styles.addModalClose} aria-label="Cerrar">
+            <CloseIcon />
+          </button>
+          <h3 className={styles.addModalTitle}>{title}</h3>
+        </div>
+
+        <div className={styles.addModalDivider} />
+
+        <div className={styles.addModalField}>
+          <label className={styles.addModalFieldLabel}>
+            {isRule ? 'Título de la regla' : 'Título de la condición'}
+          </label>
+          <input
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder={isRule ? 'Ej: No operar tras una pérdida' : 'Ej: Ruptura de máximo previo'}
+            className={styles.addModalInput}
+            autoFocus
+          />
+        </div>
+
+        <div className={styles.addModalField}>
+          <label className={styles.addModalFieldLabel}>Descripción</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe qué debe cumplirse..."
+            rows={3}
+            className={styles.addModalTextarea}
+          />
+        </div>
+
+        {error && <p className={styles.errorText}>{error}</p>}
+
+        <div className={styles.addModalFooter}>
+          <button onClick={handleSubmit} disabled={!canSubmit} className={styles.addModalSubmitBtn}>
+            <CheckIcon /> {submitting ? 'Guardando...' : isRule ? 'Agregar regla' : 'Agregar condición'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

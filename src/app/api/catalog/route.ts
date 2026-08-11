@@ -21,9 +21,11 @@ export async function GET() {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
 
+  // Solo el catálogo del sistema (isCustom: false): las condiciones y reglas
+  // personalizadas de otros usuarios son privadas y no se ofrecen aquí.
   const [conditions, rules] = await Promise.all([
-    prisma.entryCondition.findMany({ orderBy: { label: 'asc' } }),
-    prisma.behavioralRule.findMany({ orderBy: { label: 'asc' } }),
+    prisma.entryCondition.findMany({ where: { isCustom: false }, orderBy: { label: 'asc' } }),
+    prisma.behavioralRule.findMany({ where: { isCustom: false }, orderBy: { label: 'asc' } }),
   ])
 
   return NextResponse.json({ conditions, rules })
