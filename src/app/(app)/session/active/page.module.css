@@ -918,6 +918,11 @@
 
 }
 
+.tradeFormInputDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ── Cumplimiento (paso 2) ─────────────────────────────────────────────── */
 
 .cumplimientoRow {

@@ -187,6 +187,32 @@ export default function ActiveSessionPage() {
   }
 
   // ── Formulario de trade ──────────────────────────────────────────────────
+
+  // Fuerza el signo del PnL según el resultado seleccionado: WIN siempre
+  // positivo, LOSS siempre negativo, BREAKEVEN queda fijo en 0.00.
+  function enforceSign(value: string, result: TradeResult | null): string {
+    if (result === 'WIN') return value.replace(/^-/, '')
+    if (result === 'LOSS') {
+      if (value === '' || value === '-' || Number(value) === 0) return value
+      return value.startsWith('-') ? value : `-${value}`
+    }
+    return value
+  }
+
+  function handleResultChange(r: TradeResult) {
+    setTradeResult(r)
+    if (r === 'BREAKEVEN') {
+      setTradePnl('0.00')
+    } else {
+      setTradePnl((prev) => (prev === '0.00' ? '' : enforceSign(prev, r)))
+    }
+  }
+
+  function handlePnlChange(v: string) {
+    if (tradeResult === 'BREAKEVEN') return
+    setTradePnl(enforceSign(v, tradeResult))
+  }
+
   function handleOpenTradeForm() {
     setShowCloseStep(false)
     setCloseStepClosing(false)
@@ -524,9 +550,9 @@ export default function ActiveSessionPage() {
           submitting={submitting}
           submitError={submitError}
           onDirectionChange={setTradeDirection}
-          onResultChange={setTradeResult}
+          onResultChange={handleResultChange}
           onAssetChange={setTradeAsset}
-          onPnlChange={setTradePnl}
+          onPnlChange={handlePnlChange}
           onNotesChange={setTradeNotes}
           onToggleCondition={toggleCondition}
           onToggleRule={toggleRule}
@@ -732,7 +758,7 @@ function TradeForm({
               <div className={styles.fieldCol}>
                 <label className={styles.tradeFormFieldLabel}>
                   PnL de la operación
-                  <Tooltip text="Ganancia o pérdida en USD. Usa números negativos para pérdidas (ej: -45). Opcional.">
+                  <Tooltip text="Ganancia o pérdida en USD. El signo se fija automáticamente según el resultado: WIN es positivo, LOSS es negativo, BREAKEVEN es 0.00. Opcional.">
                     <InfoSvg />
                   </Tooltip>
                 </label>
@@ -742,7 +768,12 @@ function TradeForm({
                   value={tradePnl}
                   onChange={(e) => onPnlChange(e.target.value)}
                   placeholder="Ej: 48.00"
-                  className={styles.tradeFormInput}
+                  disabled={tradeResult === 'BREAKEVEN'}
+                  className={
+                    tradeResult === 'BREAKEVEN'
+                      ? `${styles.tradeFormInput} ${styles.tradeFormInputDisabled}`
+                      : styles.tradeFormInput
+                  }
                 />
               </div>
             </div>
