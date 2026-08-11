@@ -610,13 +610,7 @@
     height: auto;
     overflow-y: auto;
     overflow-x: clip;
-    /* padding-left reservado para el pill flotante del navbar (fixed en
-       pantalla, top:8px/left:8px, ~45px de ancho). Solo el header tenía este
-       hueco antes, así que al hacer scroll el resto de tarjetas (p.ej.
-       "Límites operativos") pasaban por debajo del pill y su texto quedaba
-       tapado. Reservarlo en toda la página evita que cualquier tarjeta
-       llegue a solaparse con él en algún punto del scroll. */
-    padding: 7px 7px 7px 53px;
+    padding: 7px;
     gap: 8px;
   }
 
@@ -624,9 +618,9 @@
     flex-direction: column;
     align-items: flex-start;
     height: auto;
-    margin-left: 0;
+    margin-left: 53px;
     gap: 0;
-    width: 100%;
+    width: calc(100% - 53px);
     line-height: 1.5;
   }
 
