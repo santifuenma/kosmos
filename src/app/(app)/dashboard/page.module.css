@@ -709,27 +709,32 @@
     overflow: clip;
   }
 
-  /* Título del calendario: dejar envolver para que "· Mayo" + el icono
-     no fuercen una sola línea más ancha que el viewport. */
+  /* Título del calendario: cada trozo (título / separador / mes) se trata
+     como un bloque entero que envuelve completo a la línea siguiente, en vez
+     de partirse palabra a palabra dentro de su propia "columna" flex. Todo
+     alineado a la izquierda. */
   .calendarHeader {
-    align-items: center;
+    align-items: flex-start;
   }
 
   .calendarTitle {
     height: auto;
+    flex-wrap: wrap;
+    row-gap: 2px;
     gap: 6px;
-    line-height: 1;
+    line-height: 1.3;
     margin-left: 5px;
+    white-space: nowrap;
   }
 
   .calendarStats {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    justify-content: center;
-    text-align: center;
+    justify-content: flex-start;
+    text-align: left;
     line-height: 1.5;
-    margin-left: 0;
+    margin-left: 5px;
     margin-top: 2px;
     margin-bottom: 8px;
   }
