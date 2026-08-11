@@ -8,6 +8,7 @@ import { signOut } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { TodayIntention } from '@/types'
 import styles from './Navbar.module.css'
+import mainStyles from '@/app/(app)/layout.module.css'
 
 // ── Inline SVG icons ──────────────────────────────────────────────────────────
 
@@ -91,7 +92,7 @@ function LogoutIcon() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function Navbar() {
+export default function Navbar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -155,15 +156,6 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ── Mobile pill (visible only ≤ 450px via CSS) ─────────────────────── */}
-      <button
-        className={`${styles.mobilePill} ${isOpen ? styles.mobilePillHidden : ''}`}
-        onClick={() => setIsOpen(true)}
-        aria-label="Abrir menú"
-      >
-        {activeLink?.icon ?? <HomeIcon />}
-      </button>
-
       {/* ── Overlay (visible when sidebar open on mobile) ──────────────────── */}
       <div
         className={`${styles.overlay} ${isOpen ? styles.overlayVisible : ''}`}
@@ -233,6 +225,24 @@ export default function Navbar() {
 
         </div>
       </aside>
+
+      {/* ── Contenido de la página ──────────────────────────────────────────
+          El pill móvil vive DENTRO de <main>, como primer hijo, para que sea
+          un descendiente real del contenedor que hace scroll (ver
+          layout.module.css) y se desplace con el contenido en vez de quedar
+          flotando fijo en pantalla — antes era hermano de <main> y su
+          position:absolute no tenía ningún ancestro posicionado que lo
+          "capturara", así que no importaba lo que hiciera .main. */}
+      <main className={mainStyles.main}>
+        <button
+          className={`${styles.mobilePill} ${isOpen ? styles.mobilePillHidden : ''}`}
+          onClick={() => setIsOpen(true)}
+          aria-label="Abrir menú"
+        >
+          {activeLink?.icon ?? <HomeIcon />}
+        </button>
+        {children}
+      </main>
 
       {/* Confirm dialog para logout */}
       <ConfirmDialog

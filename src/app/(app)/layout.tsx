@@ -52,10 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className={styles.appLayout}>
       <LiquidBackground />
-      <Navbar />
-      <main className={styles.main}>
-        {children}
-      </main>
+      <Navbar>{children}</Navbar>
     </div>
   )
 }
