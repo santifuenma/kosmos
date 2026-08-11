@@ -8,7 +8,16 @@
 
 .liquid-bg {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  /* Igual que .body::before en globals.css: en iOS Safari inset:0 se
+     resuelve contra el viewport "pequeño" (con la barra visible). El canvas
+     hijo hereda esta altura vía width/height:100% !important, así que si el
+     contenedor no cubre el alto máximo posible, al ocultarse la barra queda
+     un hueco donde se ve el fondo plano de <body> en vez del degradado. */
+  height: 100vh;
+  height: 100lvh;
   z-index: -1;
   pointer-events: none;   /* no bloquea clicks al formulario */
   overflow: hidden;

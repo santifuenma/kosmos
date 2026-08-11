@@ -31,10 +31,8 @@ export const metadata: Metadata = {
   description: 'Plataforma de análisis conductual para traders',
 }
 
-// viewportFit: 'cover' — deja que el fondo (body::before, fixed + inset:0)
-// se extienda bajo el notch/status bar en iOS en vez de cortarse ahí, que
-// es lo que dejaba ver el background-color plano de <body> como una franja
-// separada del degradado.
+// viewportFit: 'cover' — deja que el fondo (body::before, globals.css) se
+// extienda bajo el notch/status bar en iOS en vez de cortarse ahí.
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,

@@ -13,7 +13,9 @@
 //   - Cleanup agresivo en unmount (loseContext + removeChild)
 //   - Resize con debounce para no realocar buffers en cada pixel
 //
-// Solo se usa en la página de login. No afecta al resto de la app.
+// Se usa en las páginas de auth (login/register/verify) y en el layout de
+// la app autenticada ((app)/layout.tsx) — es el fondo animado de toda la app,
+// no solo del login.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef } from 'react'
