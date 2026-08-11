@@ -727,14 +727,20 @@
     white-space: nowrap;
   }
 
+  /* El icono de info del título se solapaba con las stats de debajo en
+     pantallas estrechas — se oculta solo en móvil. */
+  .infoWrapCalendar {
+    display: none;
+  }
+
   .calendarStats {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    justify-content: flex-start;
-    text-align: left;
+    justify-content: center;
+    text-align: center;
     line-height: 1.5;
-    margin-left: 5px;
+    margin-left: 0;
     margin-top: 2px;
     margin-bottom: 8px;
   }
