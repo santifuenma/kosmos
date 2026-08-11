@@ -703,7 +703,7 @@
   /* Calendar — altura explícita porque sale del contexto flex. */
   .calendarCard {
     flex: none;
-    min-height: 378px;
+    min-height: 420px;
     padding: 8px 10px 8px 10px;
     min-width: 0;
     overflow: clip;
@@ -750,7 +750,7 @@
   }
 
   .calGridWrap {
-    min-height: 294px;
+    min-height: 330px;
     min-width: 0;
   }
 
