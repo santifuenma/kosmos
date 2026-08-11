@@ -75,19 +75,21 @@ body {
 body::before {
   content: '';
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
   /* iOS Safari no soporta background-attachment: fixed de forma fiable, así
-     que el fondo va en un pseudo-elemento fixed (técnica estándar). height
-     se fija en dos pasos: 100vh como base, y 100lvh (large viewport height,
-     el alto máximo con la barra de herramientas oculta) lo sobreescribe en
-     navegadores que lo soportan. Si usáramos solo inset:0/100%, en iOS eso
-     se resuelve contra el viewport "pequeño" (con la barra visible), así que
-     al ocultarse la barra y crecer el área visible, quedaba un hueco sin
-     cubrir que dejaba ver el background-color plano de <body>. */
-  height: 100vh;
-  height: 100lvh;
+     que el fondo va en un pseudo-elemento fixed (técnica estándar).
+     Además, un fixed con top:0/left:0 se renderiza ~20px por debajo del
+     borde real (a la altura de la status bar) aunque haya viewport-fit=cover
+     — Safari sigue respetando el safe area para elementos fixed. Se arranca
+     en el negativo del inset y se agranda el tamaño en esa misma medida
+     para que la imagen vuelva a cubrir el borde real. height se fija en dos
+     pasos: 100vh como base, y 100lvh (alto máximo con la barra de
+     herramientas oculta) lo sobreescribe en navegadores que lo soportan, más
+     los insets verticales para cubrir también notch + home indicator. */
+  top: calc(-1 * env(safe-area-inset-top, 0px));
+  left: calc(-1 * env(safe-area-inset-left, 0px));
+  width: calc(100vw + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
+  height: calc(100vh + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+  height: calc(100lvh + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
   z-index: -1;
   background-image: url("/images/KOSMOS_Background.svg");
   background-size: cover;
