@@ -320,9 +320,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* fixed, no absolute: tiene que quedar clavado al viewport pase lo que
-       pase con el scroll de la página (absolute derivaba/se desplazaba). */
-    position: fixed;
+    /* absolute, con .main (layout.module.css) como containing block — ahora
+       que .main es el contenedor real de scroll en móvil, esto hace que el
+       pill se desplace con el contenido y desaparezca al hacer scroll en
+       vez de quedar flotando encima de todo. */
+    position: absolute;
     top: 8px;
     left: 8px;
     width: 45px;
