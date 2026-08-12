@@ -867,6 +867,56 @@
   background: rgba(37, 37, 37, 0.307);
 }
 
+/* Selector de alcance (Por Operación / Por Sesión) al crear una regla.
+   Mismo patrón que directionGrid/directionBtn del modal de trades
+   (par de botones exclusivos con label + sublabel), pero en tono neutro:
+   el alcance no tiene una connotación positiva/negativa que colorear. */
+
+.scopeGrid {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  width: 100%;
+}
+
+.scopeBtn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(37, 37, 37, 0.307);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.scopeBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.scopeBtnActive {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: var(--text-primary);
+}
+
+.scopeBtnLabel {
+  font-weight: 600;
+  font-size: clamp(13px, 1.3vw, 14px);
+}
+
+.scopeBtnSublabel {
+  font-weight: 300;
+  font-size: clamp(11px, 1.1vw, 12px);
+  opacity: 0.85;
+}
+
 .addModalFooter {
   display: flex;
   justify-content: center;

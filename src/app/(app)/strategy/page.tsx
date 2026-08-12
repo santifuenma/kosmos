@@ -849,9 +849,10 @@ function RuleRow({
 // cristal, header con título centrado y cierre en X, divider, campos y un
 // botón de envío centrado en el footer.
 //
-// Solo pide título y descripción (sin elegir scope ni tipo): el backend crea
-// la regla/condición como personalizada (isCustom: true), activa por defecto,
-// y la vincula de inmediato a la estrategia del usuario.
+// Pide título y descripción; si es una regla, también el alcance (Por
+// Operación / Por Sesión), para que quede en la lista correcta. El backend
+// crea la regla/condición como personalizada (isCustom: true), activa por
+// defecto, y la vincula de inmediato a la estrategia del usuario.
 
 function AddCustomItemModal<T extends StrategyRuleItem | StrategyConditionItem>({
   kind,
@@ -864,6 +865,7 @@ function AddCustomItemModal<T extends StrategyRuleItem | StrategyConditionItem>(
 }) {
   const [label, setLabel] = useState('')
   const [description, setDescription] = useState('')
+  const [scope, setScope] = useState<'PER_TRADE' | 'PER_SESSION'>('PER_TRADE')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [closing, setClosing] = useState(false)
@@ -886,7 +888,7 @@ function AddCustomItemModal<T extends StrategyRuleItem | StrategyConditionItem>(
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label, description }),
+      body: JSON.stringify(isRule ? { label, description, scope } : { label, description }),
     })
 
     if (!res.ok) {
@@ -916,6 +918,28 @@ function AddCustomItemModal<T extends StrategyRuleItem | StrategyConditionItem>(
         </div>
 
         <div className={styles.addModalDivider} />
+
+        {isRule && (
+          <div className={styles.addModalField}>
+            <label className={styles.addModalFieldLabel}>Alcance de la regla</label>
+            <div className={styles.scopeGrid}>
+              {([
+                { value: 'PER_TRADE', label: 'Por Operación', sublabel: 'Se revisa en cada trade' },
+                { value: 'PER_SESSION', label: 'Por Sesión', sublabel: 'Se revisa al cerrar sesión' },
+              ] as const).map(({ value, label: scopeLabel, sublabel }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setScope(value)}
+                  className={scope === value ? `${styles.scopeBtn} ${styles.scopeBtnActive}` : styles.scopeBtn}
+                >
+                  <span className={styles.scopeBtnLabel}>{scopeLabel}</span>
+                  <span className={styles.scopeBtnSublabel}>{sublabel}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className={styles.addModalField}>
           <label className={styles.addModalFieldLabel}>

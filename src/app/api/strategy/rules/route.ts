@@ -12,11 +12,12 @@ import { prisma } from '@/lib/prisma'
 // en el schema; excluida del catálogo global en GET /api/catalog y
 // POST /api/strategy).
 //
-// El modal de creación solo pide título y descripción, sin elegir el scope,
-// así que las reglas personalizadas se crean como PER_TRADE: es el caso más
-// habitual (un compromiso a revisar en cada operación) y coincide con la
-// lista "Por Operación" de la página de estrategia.
+// El modal de creación deja elegir el scope (PER_TRADE / PER_SESSION) para
+// que la regla aparezca en la lista "Por Operación" o "Por Sesión" correcta;
+// si no se envía, por defecto es PER_TRADE (el caso más habitual).
 // ─────────────────────────────────────────────────────────────────────────────
+const VALID_SCOPES = ['PER_TRADE', 'PER_SESSION']
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
@@ -33,13 +34,16 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { label, description } = await request.json()
+  const { label, description, scope = 'PER_TRADE' } = await request.json()
 
   if (!label?.trim()) {
     return NextResponse.json({ error: 'El título de la regla es obligatorio' }, { status: 400 })
   }
   if (!description?.trim()) {
     return NextResponse.json({ error: 'La descripción de la regla es obligatoria' }, { status: 400 })
+  }
+  if (!VALID_SCOPES.includes(scope)) {
+    return NextResponse.json({ error: 'El alcance de la regla no es válido' }, { status: 400 })
   }
 
   // El código solo se usa como identificador interno estable; para reglas
@@ -55,7 +59,7 @@ export async function POST(request: NextRequest) {
         code,
         label: label.trim(),
         description: description.trim(),
-        scope: 'PER_TRADE',
+        scope,
         isCustom: true,
         userId: session.user.id,
       },
