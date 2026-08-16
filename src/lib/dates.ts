@@ -68,6 +68,24 @@ export function getISOWeekNumber(date: Date): number {
 }
 
 /**
+ * Comprueba si un instante cae dentro de un rango horario "HH:mm"–"HH:mm"
+ * (hora local del navegador, mismo criterio que los inputs type="time" de
+ * la estrategia y la intención diaria).
+ *
+ * Se usa para pre-marcar automáticamente la regla TRADING_HOURS al registrar
+ * un trade (ver session/active/page.tsx), igual que MAX_TRADES_LIMIT se
+ * pre-marca comparando el conteo de trades contra el máximo.
+ */
+export function isWithinTradingHours(start: string, end: string, reference: Date = new Date()): boolean {
+  const toMinutes = (time: string) => {
+    const [h, m] = time.split(':').map(Number)
+    return h * 60 + m
+  }
+  const nowMinutes = reference.getHours() * 60 + reference.getMinutes()
+  return nowMinutes >= toMinutes(start) && nowMinutes <= toMinutes(end)
+}
+
+/**
  * Desviación estándar poblacional (no muestral).
  *
  * Usamos la poblacional porque para cada cálculo tenemos el conjunto

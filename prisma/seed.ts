@@ -57,7 +57,7 @@ async function main() {
       },
       {
         code: 'VOLUME_CONFIRM',
-        label: 'Volumen OK',
+        label: 'Volumen Confirmado',
         description: 'El volumen es adecuado para confirmar el setup',
       },
       {
@@ -90,21 +90,26 @@ async function main() {
     data: [
       {
         code: 'NO_SL_MODIFY',
-        label: 'Mantener SL',
+        label: 'Stop-Loss Respetado',
         scope: 'PER_TRADE',
         description:
           'No modificar ni eliminar el stop-loss una vez establecido',
       },
       {
+        // Deshabilitada: duplicaba el conteo de las condiciones de entrada
+        // en la fórmula del ICO (Vs se incrementaba dos veces por el mismo
+        // evento). Se conserva en el catálogo (isActive: false) porque ya
+        // existen violaciones históricas que la referencian.
         code: 'CONDITIONS_MET',
         label: 'Condiciones OK',
         scope: 'PER_TRADE',
+        isActive: false,
         description:
           'Solo entrar cuando todas las condiciones de entrada activas se cumplen',
       },
       {
         code: 'NO_IMPULSE_ENTRY',
-        label: 'Sin Impulso',
+        label: 'Entrada Deliberada',
         scope: 'PER_TRADE',
         description:
           'La entrada fue deliberada, no motivada por impulso o FOMO',
@@ -125,22 +130,29 @@ async function main() {
       },
       {
         code: 'TRADING_HOURS',
-        label: 'Horario OK',
-        scope: 'PER_SESSION',
+        label: 'Horario Respetado',
+        // PER_TRADE: se evalúa por operación individual comparando su timestamp
+        // contra el horario de la Daily Intention del día (ver /api/session/trade).
+        scope: 'PER_TRADE',
         description:
           'Todas las operaciones se ejecutaron dentro del horario definido',
       },
       {
         code: 'NO_REVENGE_TRADE',
-        label: 'Sin Venganza',
-        scope: 'PER_SESSION',
+        label: 'Sin Trade de Venganza',
+        scope: 'PER_TRADE',
         description:
           'No entró en operaciones motivado por recuperar una pérdida anterior',
       },
       {
+        // Deshabilitada: imposible de violar, la edición de estrategia ya
+        // está bloqueada mientras hay sesión abierta. Se conserva en el
+        // catálogo (isActive: false) por las violaciones históricas que la
+        // referencian.
         code: 'STRATEGY_FOLLOWED',
         label: 'Estrategia OK',
         scope: 'PER_SESSION',
+        isActive: false,
         description:
           'No cambió ni modificó la estrategia durante la sesión',
       },

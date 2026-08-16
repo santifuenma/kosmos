@@ -152,9 +152,12 @@ export async function POST(request: NextRequest) {
   // Usamos Promise.all para hacer las dos queries en paralelo y reducir latencia.
   // isCustom: false excluye las condiciones/reglas personalizadas de otros
   // usuarios: son privadas y nunca se vinculan a una estrategia ajena.
+  // isActive: true excluye los ítems desactivados del catálogo (soft delete):
+  // las estrategias nuevas ya no se vinculan a ellos, aunque los IDs sigan
+  // existiendo para las violaciones históricas que ya los referencian.
   const [allConditions, allRules] = await Promise.all([
-    prisma.entryCondition.findMany({ where: { isCustom: false } }),
-    prisma.behavioralRule.findMany({ where: { isCustom: false } }),
+    prisma.entryCondition.findMany({ where: { isCustom: false, isActive: true } }),
+    prisma.behavioralRule.findMany({ where: { isCustom: false, isActive: true } }),
   ])
 
   // Sets para resolver isActive en O(1) al mapear el catálogo. Los ids que

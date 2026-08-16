@@ -21,11 +21,13 @@ export async function GET() {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
 
-  // Solo el catálogo del sistema (isCustom: false): las condiciones y reglas
-  // personalizadas de otros usuarios son privadas y no se ofrecen aquí.
+  // Solo el catálogo del sistema (isCustom: false) y activo (isActive: true):
+  // las condiciones y reglas personalizadas de otros usuarios son privadas y
+  // no se ofrecen aquí, y los ítems desactivados del catálogo (soft delete)
+  // dejan de ofrecerse aunque sus IDs sigan existiendo para el historial.
   const [conditions, rules] = await Promise.all([
-    prisma.entryCondition.findMany({ where: { isCustom: false }, orderBy: { label: 'asc' } }),
-    prisma.behavioralRule.findMany({ where: { isCustom: false }, orderBy: { label: 'asc' } }),
+    prisma.entryCondition.findMany({ where: { isCustom: false, isActive: true }, orderBy: { label: 'asc' } }),
+    prisma.behavioralRule.findMany({ where: { isCustom: false, isActive: true }, orderBy: { label: 'asc' } }),
   ])
 
   return NextResponse.json({ conditions, rules })
