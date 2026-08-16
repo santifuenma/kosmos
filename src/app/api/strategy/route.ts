@@ -24,6 +24,12 @@ const strategyInclude = {
 // Acepta 00:00 – 23:59 con cero inicial obligatorio.
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
 
+// MAX_TRADES_LIMIT y TRADING_HOURS se basan en campos ya obligatorios de la
+// estrategia (maxTrades, tradingHours) y se autodetectan: no son un toggle
+// opcional. Se fuerzan a isActive: true al crear estrategias nuevas, sin
+// excepción (ver POST). Las estrategias ya existentes no se tocan.
+const MANDATORY_RULE_CODES = ['MAX_TRADES_LIMIT', 'TRADING_HOURS']
+
 // Convierte una hora "HH:mm" a minutos desde medianoche para comparar rangos.
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number)
@@ -184,9 +190,14 @@ export async function POST(request: NextRequest) {
         })),
       },
       rules: {
+        // MAX_TRADES_LIMIT y TRADING_HOURS se basan en campos ya obligatorios
+        // de la estrategia (maxTrades, tradingHours) y se autodetectan: no
+        // tiene sentido que además sean opcionales. Se crean siempre activas
+        // para estrategias nuevas, sin excepción, ignorando lo que venga en
+        // activeRuleIds. Las estrategias ya existentes no se tocan aquí.
         create: allRules.map((r) => ({
           ruleId: r.id,
-          isActive: activeRules.has(r.id),
+          isActive: MANDATORY_RULE_CODES.includes(r.code) || activeRules.has(r.id),
         })),
       },
     },

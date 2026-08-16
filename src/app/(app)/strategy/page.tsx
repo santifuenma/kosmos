@@ -32,6 +32,13 @@ function byActiveFirst(a: { isActive: boolean }, b: { isActive: boolean }): numb
   return Number(b.isActive) - Number(a.isActive)
 }
 
+// MAX_TRADES_LIMIT y TRADING_HOURS ya son obligatorias: se basan en campos
+// obligatorios de la estrategia (maxTrades, tradingHours) y se autodetectan,
+// así que no tiene sentido exponerlas como toggle opcional. Se excluyen de
+// las listas de Reglas Conductuales; la nota estática bajo Límites
+// Operativos explica que se evalúan automáticamente.
+const MANDATORY_RULE_CODES = ['MAX_TRADES_LIMIT', 'TRADING_HOURS']
+
 function formatCreatedDate(dateStr: string | Date): string {
   const d = new Date(dateStr)
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -269,8 +276,12 @@ function ManageStrategyView({
   const [showAddCondition, setShowAddCondition] = useState(false)
   const activeConditions = strategy.conditions.filter((c) => c.isActive).length
   const activeRules = strategy.rules.filter((r) => r.isActive).length
-  const perTradeRules = strategy.rules.filter((r) => r.rule.scope === 'PER_TRADE').sort(byActiveFirst)
-  const perSessionRules = strategy.rules.filter((r) => r.rule.scope === 'PER_SESSION').sort(byActiveFirst)
+  const perTradeRules = strategy.rules
+    .filter((r) => r.rule.scope === 'PER_TRADE' && !MANDATORY_RULE_CODES.includes(r.rule.code))
+    .sort(byActiveFirst)
+  const perSessionRules = strategy.rules
+    .filter((r) => r.rule.scope === 'PER_SESSION' && !MANDATORY_RULE_CODES.includes(r.rule.code))
+    .sort(byActiveFirst)
   const dateDisplay = getTodayDisplay()
 
   return (
@@ -552,6 +563,9 @@ function StrategyReadMode({
         <p className={styles.limitsFooter}>
           Estos límites se aplicarán automáticamente a cada sesión de trading.
         </p>
+        <p className={styles.limitsAutoNote}>
+          Estos límites se evalúan automáticamente en cada sesión.
+        </p>
       </div>
     </div>
   )
@@ -715,6 +729,9 @@ function StrategyEditMode({
 
         <p className={styles.limitsFooter}>
           Estos límites se aplicarán automáticamente a cada sesión de trading.
+        </p>
+        <p className={styles.limitsAutoNote}>
+          Estos límites se evalúan automáticamente en cada sesión.
         </p>
       </div>
     </div>
