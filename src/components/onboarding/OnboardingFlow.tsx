@@ -32,6 +32,12 @@ import {
 } from '@/components/icons'
 import styles from './OnboardingFlow.module.css'
 
+// MAX_TRADES_LIMIT y TRADING_HOURS se basan en campos ya obligatorios de la
+// estrategia (maxTrades, tradingHours) y se autodetectan: POST /api/strategy
+// las crea siempre activas, sin excepción. Se excluyen de la selección de
+// reglas del Paso 2 (ver StrategyModal más abajo).
+const MANDATORY_RULE_CODES = ['MAX_TRADES_LIMIT', 'TRADING_HOURS']
+
 export default function OnboardingFlow() {
   const router = useRouter()
 
@@ -286,8 +292,11 @@ function StrategyModal({
 
   const stepClass = stepDirection === 'forward' ? styles.stepForward : styles.stepBackward
 
-  const perTradeRules = catalog?.rules.filter((r) => r.scope === 'PER_TRADE') ?? []
-  const perSessionRules = catalog?.rules.filter((r) => r.scope === 'PER_SESSION') ?? []
+  // MAX_TRADES_LIMIT y TRADING_HOURS son obligatorias (POST /api/strategy las
+  // fuerza a isActive: true sin excepción), así que no se ofrecen como toggle
+  // aquí: mostrarlas sería un control que aparenta funcionar pero no hace nada.
+  const perTradeRules = catalog?.rules.filter((r) => r.scope === 'PER_TRADE' && !MANDATORY_RULE_CODES.includes(r.code)) ?? []
+  const perSessionRules = catalog?.rules.filter((r) => r.scope === 'PER_SESSION' && !MANDATORY_RULE_CODES.includes(r.code)) ?? []
 
   return (
     <div className={overlayClass}>

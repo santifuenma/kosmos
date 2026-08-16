@@ -243,6 +243,12 @@
   font-size: clamp(12px, 1vw, 13px);
 }
 
+.limitsAutoNote {
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-size: clamp(12px, 1vw, 13px);
+}
+
 
 /* ── 4. Edit mode ──────────────────────────────────────────────────────── */
 
