@@ -37,6 +37,7 @@ import type {
 } from '@/types'
 import { useSession } from 'next-auth/react'
 import { emotionalStateLabel } from '@/lib/gender'
+import { isWithinTradingHours } from '@/lib/dates'
 import { getDailyTip } from '@/lib/dailyTips'
 import { capitalize } from '@/lib/utils'
 import styles from './page.module.css'
@@ -213,6 +214,12 @@ export default function ActiveSessionPage() {
     setTradePnl(enforceSign(v, tradeResult))
   }
 
+  // Al abrir el formulario, si TRADING_HOURS está activa y el momento actual
+  // cae fuera del horario de la Daily Intention del día, la pre-marcamos como
+  // violada (igual que MAX_TRADES_LIMIT se pre-marca al abrir el cierre de
+  // sesión). Se calcula una sola vez aquí, no en cada paso, para que si el
+  // trader la revisa y la revierte en Paso 2, no vuelva a marcarse sola al
+  // navegar entre pasos.
   function handleOpenTradeForm() {
     setShowCloseStep(false)
     setCloseStepClosing(false)
@@ -220,6 +227,18 @@ export default function ActiveSessionPage() {
     setTradeStep(1)
     setStepDirection('forward')
     setTradeFormClosing(false)
+
+    const tradingHoursRule = activePerTradeRules.find(
+      (r) => r.rule.code === 'TRADING_HOURS',
+    )
+    if (
+      tradingHoursRule &&
+      sessionData &&
+      !isWithinTradingHours(sessionData.intention.tradingHoursStart, sessionData.intention.tradingHoursEnd)
+    ) {
+      setViolatedRuleIds(new Set([tradingHoursRule.id]))
+    }
+
     setShowTradeForm(true)
   }
 

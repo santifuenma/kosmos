@@ -137,6 +137,11 @@ model EntryCondition {
   label       String
   // Explicación completa de qué debe cumplirse para que esta condición sea válida
   description String
+  // true si esta condición se ofrece para activar en nuevas estrategias (onboarding
+  // y POST /api/strategy). false = "soft deleted": deja de ofrecerse, pero el
+  // registro y las violaciones históricas que lo referencian permanecen intactos.
+  // No confundir con StrategyCondition.isActive (activación por usuario).
+  isActive    Boolean @default(true)
   // true si la creó un trader desde su estrategia (no viene del catálogo del sistema).
   // Las condiciones personalizadas son privadas: solo se vinculan a estrategias
   // de su propio autor, nunca se ofrecen a otros usuarios ni en el onboarding.
@@ -159,6 +164,11 @@ model BehavioralRule {
   // "PER_TRADE": se evalúa en cada operación individual (ej: "No mover el SL")
   // "PER_SESSION": se evalúa una vez al cerrar la sesión (ej: "No hacer revenge trading")
   scope       String
+  // true si esta regla se ofrece para activar en nuevas estrategias (onboarding
+  // y POST /api/strategy). false = "soft deleted": deja de ofrecerse, pero el
+  // registro y las violaciones históricas que lo referencian permanecen intactos.
+  // No confundir con StrategyRule.isActive (activación por usuario).
+  isActive    Boolean @default(true)
   // true si la creó un trader desde su estrategia (no viene del catálogo del sistema).
   // Las reglas personalizadas son privadas: solo se vinculan a estrategias de
   // su propio autor, nunca se ofrecen a otros usuarios ni en el onboarding.

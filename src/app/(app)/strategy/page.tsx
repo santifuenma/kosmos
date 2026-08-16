@@ -24,6 +24,14 @@ import styles from './page.module.css'
 // formatCreatedDate → "18 de mayo de 2026" (para la fecha de creación)
 // getTodayDisplay   → "Domingo, 18 de mayo de 2026" (para el header)
 
+// Orden de presentación: los ítems activos en la estrategia del usuario van
+// primero. Es puramente visual (no cambia isActive ni el orden en BD); dentro
+// de cada grupo se conserva el orden alfabético por label que ya trae la API
+// (Array.prototype.sort es estable en los motores JS modernos).
+function byActiveFirst(a: { isActive: boolean }, b: { isActive: boolean }): number {
+  return Number(b.isActive) - Number(a.isActive)
+}
+
 function formatCreatedDate(dateStr: string | Date): string {
   const d = new Date(dateStr)
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -261,8 +269,8 @@ function ManageStrategyView({
   const [showAddCondition, setShowAddCondition] = useState(false)
   const activeConditions = strategy.conditions.filter((c) => c.isActive).length
   const activeRules = strategy.rules.filter((r) => r.isActive).length
-  const perTradeRules = strategy.rules.filter((r) => r.rule.scope === 'PER_TRADE')
-  const perSessionRules = strategy.rules.filter((r) => r.rule.scope === 'PER_SESSION')
+  const perTradeRules = strategy.rules.filter((r) => r.rule.scope === 'PER_TRADE').sort(byActiveFirst)
+  const perSessionRules = strategy.rules.filter((r) => r.rule.scope === 'PER_SESSION').sort(byActiveFirst)
   const dateDisplay = getTodayDisplay()
 
   return (
@@ -395,7 +403,7 @@ function ManageStrategyView({
               <span className={styles.addItemIcon}><PlusIcon /></span>
             </button>
 
-            {strategy.conditions.map((sc) => (
+            {strategy.conditions.slice().sort(byActiveFirst).map((sc) => (
               <ConditionRow
                 key={sc.id}
                 item={sc}
