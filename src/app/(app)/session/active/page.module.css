@@ -396,8 +396,8 @@
   position: relative;
   overflow: hidden;
   margin-top: 5px !important;
-  -webkit-backdrop-filter: blur(15px);
-  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -596,8 +596,8 @@
   /* Fondo casi opaco porque backdrop-filter no atraviesa al padre
      .tableWrap que también tiene backdrop-filter (stacking context). */
   background: rgba(20, 18, 35, 0.97);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
@@ -710,8 +710,8 @@
   height: 570px;
   max-height: 90vh;
   background: rgba(214, 214, 214, 0.286);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
@@ -1365,7 +1365,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
   padding: 20px;
   animation: overlayFadeIn 0.25s ease-out;
 }
@@ -1396,7 +1396,7 @@
   width: 100%;
   max-width: 560px;
   background: rgba(25, 25, 40, 0.85);
-  backdrop-filter: blur(30px);
+  backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);

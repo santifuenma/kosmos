@@ -41,3 +41,62 @@ export async function PATCH(
 
   return NextResponse.json(updated)
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /api/strategy/rules/[id]
+//
+// Elimina una regla personalizada de la estrategia del usuario. Las reglas
+// predeterminadas del sistema (isCustom: false) no se pueden eliminar, solo
+// desactivar vía PATCH.
+//
+// Siempre se borra el vínculo StrategyRule. Si la regla nunca se usó (sin
+// TradeViolation ni SessionViolation que la referencien), también se borra
+// el BehavioralRule en sí. Si ya tiene historial, se conserva para no romper
+// la integridad referencial de las violaciones ya guardadas (mismo criterio
+// de soft delete que el catálogo del sistema).
+// ─────────────────────────────────────────────────────────────────────────────
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  }
+
+  const { id } = await params
+
+  const strategyRule = await prisma.strategyRule.findUnique({
+    where: { id },
+    include: { strategy: true, rule: true },
+  })
+
+  if (!strategyRule || strategyRule.strategy.userId !== session.user.id) {
+    return NextResponse.json({ error: 'Regla no encontrada' }, { status: 404 })
+  }
+
+  if (!strategyRule.rule.isCustom) {
+    return NextResponse.json(
+      { error: 'Las reglas predeterminadas del sistema no se pueden eliminar' },
+      { status: 403 },
+    )
+  }
+
+  const [tradeViolationCount, sessionViolationCount] = await Promise.all([
+    prisma.tradeViolation.count({ where: { ruleId: strategyRule.ruleId } }),
+    prisma.sessionViolation.count({ where: { ruleId: strategyRule.ruleId } }),
+  ])
+
+  await prisma.$transaction(async (tx) => {
+    await tx.strategyRule.delete({ where: { id } })
+
+    // Sin violaciones históricas que la referencien: se puede borrar del todo.
+    // Si las tiene, el BehavioralRule se conserva (queda huérfano de estrategia
+    // pero intacto para que las violaciones sigan mostrando su label).
+    if (tradeViolationCount === 0 && sessionViolationCount === 0) {
+      await tx.behavioralRule.delete({ where: { id: strategyRule.ruleId } })
+    }
+  })
+
+  return new NextResponse(null, { status: 204 })
+}
