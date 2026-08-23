@@ -16,6 +16,11 @@ export type EntryConditionItem = {
   label: string
   description: string
   isCustom: boolean
+  // Catálogo activo (se ofrece para vincular a estrategias): false = soft
+  // deleted, ya no se ofrece pero el registro y las violaciones históricas
+  // que lo referencian permanecen. No confundir con StrategyConditionItem.isActive
+  // (activación por usuario dentro de su propia estrategia).
+  isActive: boolean
 }
 
 // Una regla conductual del catálogo predefinido (ej: "Mantener SL"), o una
@@ -28,6 +33,11 @@ export type BehavioralRuleItem = {
   description: string
   scope: 'PER_TRADE' | 'PER_SESSION'
   isCustom: boolean
+  // Catálogo activo (se ofrece para vincular a estrategias): false = soft
+  // deleted, ya no se ofrece pero el registro y las violaciones históricas
+  // que lo referencian permanecen. No confundir con StrategyRuleItem.isActive
+  // (activación por usuario dentro de su propia estrategia).
+  isActive: boolean
 }
 
 // Respuesta de GET /api/catalog: el catálogo maestro sin vincular a ninguna

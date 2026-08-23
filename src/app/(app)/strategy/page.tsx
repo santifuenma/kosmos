@@ -17,7 +17,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { StrategyWithRelations, StrategyConditionItem, StrategyRuleItem } from '@/types'
 import { capitalize } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
-import { EditIcon, CheckIcon, CancelIcon, InfoIcon, LockIcon, CloseIcon, PlusIcon } from '@/components/icons'
+import { EditIcon, CheckIcon, CancelIcon, InfoIcon, LockIcon, CloseIcon, PlusIcon, XCircleIcon } from '@/components/icons'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import styles from './page.module.css'
 
 // ── Helpers de formato de fecha ──────────────────────────────────────────────
@@ -276,11 +277,14 @@ function ManageStrategyView({
   const [showAddCondition, setShowAddCondition] = useState(false)
   const activeConditions = strategy.conditions.filter((c) => c.isActive).length
   const activeRules = strategy.rules.filter((r) => r.isActive).length
+  // r.rule.isActive (catálogo) excluye reglas soft-deleted (CONDITIONS_MET,
+  // STRATEGY_FOLLOWED): estrategias creadas antes de esa desactivación pueden
+  // seguir teniendo el vínculo en BD, pero ya no se ofrecen ni se muestran.
   const perTradeRules = strategy.rules
-    .filter((r) => r.rule.scope === 'PER_TRADE' && !MANDATORY_RULE_CODES.includes(r.rule.code))
+    .filter((r) => r.rule.scope === 'PER_TRADE' && r.rule.isActive && !MANDATORY_RULE_CODES.includes(r.rule.code))
     .sort(byActiveFirst)
   const perSessionRules = strategy.rules
-    .filter((r) => r.rule.scope === 'PER_SESSION' && !MANDATORY_RULE_CODES.includes(r.rule.code))
+    .filter((r) => r.rule.scope === 'PER_SESSION' && r.rule.isActive && !MANDATORY_RULE_CODES.includes(r.rule.code))
     .sort(byActiveFirst)
   const dateDisplay = getTodayDisplay()
 
@@ -363,6 +367,12 @@ function ManageStrategyView({
                         rules: strategy.rules.map((r) => r.id === updated.id ? updated : r),
                       })
                     }}
+                    onDelete={(id) => {
+                      onUpdate({
+                        ...strategy,
+                        rules: strategy.rules.filter((r) => r.id !== id),
+                      })
+                    }}
                   />
                 ))}
               </>
@@ -380,6 +390,12 @@ function ManageStrategyView({
                       onUpdate({
                         ...strategy,
                         rules: strategy.rules.map((r) => r.id === updated.id ? updated : r),
+                      })
+                    }}
+                    onDelete={(id) => {
+                      onUpdate({
+                        ...strategy,
+                        rules: strategy.rules.filter((r) => r.id !== id),
                       })
                     }}
                   />
@@ -414,7 +430,7 @@ function ManageStrategyView({
               <span className={styles.addItemIcon}><PlusIcon /></span>
             </button>
 
-            {strategy.conditions.slice().sort(byActiveFirst).map((sc) => (
+            {strategy.conditions.filter((sc) => sc.condition.isActive).sort(byActiveFirst).map((sc) => (
               <ConditionRow
                 key={sc.id}
                 item={sc}
@@ -423,6 +439,12 @@ function ManageStrategyView({
                   onUpdate({
                     ...strategy,
                     conditions: strategy.conditions.map((c) => c.id === updated.id ? updated : c),
+                  })
+                }}
+                onDelete={(id) => {
+                  onUpdate({
+                    ...strategy,
+                    conditions: strategy.conditions.filter((c) => c.id !== id),
                   })
                 }}
               />
@@ -561,10 +583,8 @@ function StrategyReadMode({
         </div>
 
         <p className={styles.limitsFooter}>
-          Estos límites se aplicarán automáticamente a cada sesión de trading.
-        </p>
-        <p className={styles.limitsAutoNote}>
-          Estos límites se evalúan automáticamente en cada sesión.
+          Estos límites se aplicarán automáticamente a cada sesión de trading
+          y serán evaluados automáticamente.
         </p>
       </div>
     </div>
@@ -728,10 +748,8 @@ function StrategyEditMode({
         </div>
 
         <p className={styles.limitsFooter}>
-          Estos límites se aplicarán automáticamente a cada sesión de trading.
-        </p>
-        <p className={styles.limitsAutoNote}>
-          Estos límites se evalúan automáticamente en cada sesión.
+          Estos límites se aplicarán automáticamente a cada sesión de trading
+          y serán evaluados automáticamente.
         </p>
       </div>
     </div>
@@ -781,14 +799,19 @@ function Toggle({
 function ConditionRow({
   item,
   onToggle,
+  onDelete,
   locked,
 }: {
   item: StrategyConditionItem
   onToggle: (updated: StrategyConditionItem) => void
+  onDelete: (id: string) => void
   locked?: boolean
 }) {
   const [pending, setPending] = useState(false)
   const [isActive, setIsActive] = useState(item.isActive)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   async function handleToggle() {
     if (pending || locked) return
@@ -810,13 +833,56 @@ function ConditionRow({
     setPending(false)
   }
 
+  async function handleDelete() {
+    setDeleting(true)
+    setDeleteError('')
+
+    const res = await fetch(`/api/strategy/conditions/${item.id}`, { method: 'DELETE' })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setDeleteError(data.error ?? 'No se pudo eliminar la condición.')
+      setDeleting(false)
+      return
+    }
+
+    onDelete(item.id)
+  }
+
   return (
     <div className={styles.itemRow}>
       <div className={styles.itemInfo}>
-        <h3 className={styles.itemLabel}>{item.condition.label}</h3>
+        <div className={styles.itemLabelRow}>
+          <h3 className={styles.itemLabel}>{item.condition.label}</h3>
+          {!item.condition.isCustom && <span className={styles.defaultBadge}>Predeterminada</span>}
+        </div>
         <p className={styles.itemDescription}>{item.condition.description}</p>
       </div>
-      <Toggle isActive={isActive} onToggle={handleToggle} disabled={locked} />
+      <div className={styles.itemActions}>
+        {item.condition.isCustom && (
+          <button
+            type="button"
+            onClick={() => setConfirmingDelete(true)}
+            disabled={locked}
+            aria-label="Eliminar condición"
+            className={styles.deleteBtn}
+          >
+            <XCircleIcon />
+          </button>
+        )}
+        <Toggle isActive={isActive} onToggle={handleToggle} disabled={locked} />
+      </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="¿Eliminar esta condición?"
+        message={deleteError || 'Se quitará de tu estrategia. Si ya la usaste en algún trade se desactiva conservando el historial; si nunca la usaste, se elimina por completo.'}
+        confirmLabel={deleting ? 'Eliminando...' : 'Eliminar'}
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => { setConfirmingDelete(false); setDeleteError('') }}
+      />
     </div>
   )
 }
@@ -828,14 +894,19 @@ function ConditionRow({
 function RuleRow({
   item,
   onToggle,
+  onDelete,
   locked,
 }: {
   item: StrategyRuleItem
   onToggle: (updated: StrategyRuleItem) => void
+  onDelete: (id: string) => void
   locked?: boolean
 }) {
   const [pending, setPending] = useState(false)
   const [isActive, setIsActive] = useState(item.isActive)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   async function handleToggle() {
     if (pending || locked) return
@@ -857,13 +928,56 @@ function RuleRow({
     setPending(false)
   }
 
+  async function handleDelete() {
+    setDeleting(true)
+    setDeleteError('')
+
+    const res = await fetch(`/api/strategy/rules/${item.id}`, { method: 'DELETE' })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setDeleteError(data.error ?? 'No se pudo eliminar la regla.')
+      setDeleting(false)
+      return
+    }
+
+    onDelete(item.id)
+  }
+
   return (
     <div className={styles.itemRow}>
       <div className={styles.itemInfo}>
-        <h3 className={styles.itemLabel}>{item.rule.label}</h3>
+        <div className={styles.itemLabelRow}>
+          <h3 className={styles.itemLabel}>{item.rule.label}</h3>
+          {!item.rule.isCustom && <span className={styles.defaultBadge}>Predeterminada</span>}
+        </div>
         <p className={styles.itemDescription}>{item.rule.description}</p>
       </div>
-      <Toggle isActive={isActive} onToggle={handleToggle} disabled={locked} />
+      <div className={styles.itemActions}>
+        {item.rule.isCustom && (
+          <button
+            type="button"
+            onClick={() => setConfirmingDelete(true)}
+            disabled={locked}
+            aria-label="Eliminar regla"
+            className={styles.deleteBtn}
+          >
+            <XCircleIcon />
+          </button>
+        )}
+        <Toggle isActive={isActive} onToggle={handleToggle} disabled={locked} />
+      </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="¿Eliminar esta regla?"
+        message={deleteError || 'Se quitará de tu estrategia. Si ya la usaste en algún trade se desactiva conservando el historial; si nunca la usaste, se elimina por completo.'}
+        confirmLabel={deleting ? 'Eliminando...' : 'Eliminar'}
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => { setConfirmingDelete(false); setDeleteError('') }}
+      />
     </div>
   )
 }
