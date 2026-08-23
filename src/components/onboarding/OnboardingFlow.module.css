@@ -162,8 +162,10 @@
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
   padding: 20px;
   animation: overlayFadeIn 0.25s ease-out;
 }
@@ -178,8 +180,10 @@
   height: 570px;
   max-height: 90vh;
   background: rgba(214, 214, 214, 0.286);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);

@@ -358,8 +358,10 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
     z-index: 99;
     opacity: 0;
     pointer-events: none;
@@ -389,8 +391,9 @@
   .sidebarOpen .sidebarInner {
     align-items: stretch;
     padding: 20px 16px 16px 16px;
-    backdrop-filter: blur(10px);
-
+    backdrop-filter: blur(6px);
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 
   .sidebarOpen .logoText {

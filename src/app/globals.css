@@ -296,8 +296,8 @@ table {
 
 .card {
   background: var(--glass-base);
-  -webkit-backdrop-filter: blur(15px);
-  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -477,8 +477,8 @@ table {
   /* Fondo casi opaco: backdrop-filter no atraviesa stacking contexts
      creados por padres con backdrop-filter (cards, modales). */
   background: rgba(20, 18, 35, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
   padding: 10px 13px;
@@ -516,8 +516,8 @@ table {
   position: fixed;
   width: 220px;
   background: rgba(20, 18, 35, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
   padding: 10px 13px;
@@ -576,8 +576,8 @@ table {
   width: 100%;
   max-width: 400px;
   background: rgba(30, 30, 45, 0.82);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
