@@ -14,10 +14,34 @@ on:
   pull_request:
     branches: [master]
 
+# Cadena de conexión al Postgres del job (ver `services` más abajo). Es un
+# contenedor desechable que solo existe durante la ejecución: la contraseña
+# no protege nada real.
+env:
+  CI_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kosmos_ci
+
 jobs:
   verify:
     name: Lint, test y build
     runs-on: ubuntu-latest
+
+    # Kosmos usa PostgreSQL (Supabase en producción), así que el CI necesita un
+    # Postgres real: el schema de Prisma ya no es compatible con SQLite.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kosmos_ci
+        ports:
+          - 5432:5432
+        # Esperamos a que acepte conexiones antes de que arranquen los pasos.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout
@@ -43,13 +67,16 @@ jobs:
       - name: Tests unitarios
         run: npm test
 
-      # Para que `next build` pueda hacer type-check de las rutas que usan
-      # Prisma, necesita una base de datos accesible. Aplicamos las migraciones
-      # sobre un SQLite vacío que se descarta al terminar el job.
+      # Aplicamos las migraciones sobre el Postgres efímero del job. Además de
+      # dejar la BD lista para el build, esto comprueba que el historial de
+      # migraciones se aplica limpio desde cero sobre PostgreSQL.
+      #
+      # Prisma 7 lee la URL de las migraciones de DIRECT_URL (ver
+      # prisma.config.ts), no de DATABASE_URL.
       - name: Aplicar migraciones (DB de CI)
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: file:./prisma/ci.db
+          DIRECT_URL: ${{ env.CI_DATABASE_URL }}
 
       - name: Build
         run: npm run build
@@ -58,4 +85,5 @@ jobs:
           # faltantes; nunca se usan para firmar sesiones reales.
           NEXTAUTH_SECRET: ci-secret-not-used-anywhere
           NEXTAUTH_URL: http://localhost:3000
-          DATABASE_URL: file:./prisma/ci.db
+          DATABASE_URL: ${{ env.CI_DATABASE_URL }}
+          DIRECT_URL: ${{ env.CI_DATABASE_URL }}
