@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/verification'
+import { normalizeEmail } from '@/lib/emailAddress'
 
 const GENERIC_RESPONSE = {
   message: 'Si esa cuenta existe y está pendiente de confirmar, le hemos enviado un enlace nuevo.',
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
 
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { email: normalizeEmail(email) },
     select: { id: true, email: true, firstName: true, emailVerified: true },
   })
 

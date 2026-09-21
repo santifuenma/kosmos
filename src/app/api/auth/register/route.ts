@@ -18,12 +18,7 @@ import { prisma } from '@/lib/prisma'
 import { parseGender, GENDER_OPTIONS } from '@/lib/gender'
 import { sendVerificationEmail } from '@/lib/verification'
 import { validatePassword } from '@/lib/password'
-
-// Expresión regular para validar el formato básico de un email.
-// No validamos con una regex exhaustiva de RFC 5321 porque resulta ilegible
-// y en la práctica esta comprobación es suficiente para detectar errores
-// tipográficos. La fuente de verdad de emails válidos es el servidor de correo.
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { EMAIL_REGEX, normalizeEmail } from '@/lib/emailAddress'
 
 // Límite defensivo: sin él, un nombre de 10 MB llegaría hasta la BD.
 const MAX_NAME_LENGTH = 80
@@ -59,7 +54,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!EMAIL_REGEX.test(email)) {
+    if (typeof email !== 'string' || !EMAIL_REGEX.test(email)) {
       return NextResponse.json(
         { error: 'El formato del email no es válido' },
         { status: 400 },
@@ -86,7 +81,11 @@ export async function POST(request: NextRequest) {
     // Comprobamos duplicados antes del insert para devolver un mensaje claro.
     // Sin esta comprobación Prisma lanzaría un error de constraint único (P2002)
     // cuyo mensaje genérico no es apropiado para mostrar al usuario.
-    const existing = await prisma.user.findUnique({ where: { email } })
+    // Guardamos y buscamos siempre la forma normalizada: es lo que impide que
+    // la misma dirección escrita con otra caja pase el control de duplicados.
+    const normalizedEmail = normalizeEmail(email)
+
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } })
     if (existing) {
       return NextResponse.json(
         { error: 'Ya existe una cuenta con este email' },
@@ -102,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         firstName: cleanFirstName,
         lastName: cleanLastName,

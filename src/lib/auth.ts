@@ -19,6 +19,13 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { parseGender, type Gender } from '@/lib/gender'
+import { normalizeEmail } from '@/lib/emailAddress'
+
+// Hash de una cadena aleatoria que nadie conoce, generado con el mismo coste
+// que los reales. Sirve para gastar el mismo tiempo cuando el correo no existe
+// (ver más abajo); ninguna contraseña puede coincidir con él.
+const DUMMY_PASSWORD_HASH =
+  '$2b$10$cKmjD4avXM4SPTngo67AEua3Fiunl6c33naCDqDxpt4nmzInGQ0oa'
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -50,20 +57,27 @@ export const authOptions: NextAuthOptions = {
         // deliberadamente sin distinguir entre "email no encontrado" y
         // "contraseña incorrecta". Dar mensajes distintos facilitaría
         // la enumeración de usuarios registrados.
+        // La dirección se normaliza igual que al registrarse; si no, quien se
+        // dio de alta escribiendo su correo de una forma no entraría al
+        // teclearlo de otra.
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: normalizeEmail(credentials.email) },
         })
-
-        if (!user) return null
 
         // bcrypt.compare es el método seguro para verificar contraseñas hasheadas.
         // Nunca comparamos en texto plano porque el hash es irreversible por diseño.
+        //
+        // Cuando el correo no existe comparamos igualmente contra un hash de
+        // relleno en lugar de salir antes. Verificar un hash cuesta unos 100 ms
+        // y no hacerlo cuesta casi cero, así que sin esto el tiempo de
+        // respuesta delata qué direcciones están registradas: exactamente lo
+        // que el mensaje de error genérico trata de ocultar.
         const passwordMatch = await bcrypt.compare(
           credentials.password,
-          user.password,
+          user?.password ?? DUMMY_PASSWORD_HASH,
         )
 
-        if (!passwordMatch) return null
+        if (!user || !passwordMatch) return null
 
         // Cuenta sin confirmar: la comprobación va DESPUÉS de validar la
         // contraseña a propósito. Si avisáramos antes, cualquiera podría

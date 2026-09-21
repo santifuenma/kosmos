@@ -194,10 +194,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(trade, { status: 201 })
   } catch (err) {
+    // El detalle va al log del servidor, no a la respuesta: los errores de
+    // Prisma nombran modelos, columnas y restricciones, y eso le dibuja el
+    // esquema a cualquiera que provoque un fallo a propósito.
     console.error('[POST /api/session/trade] prisma.trade.create failed:', err)
-    const message = err instanceof Error ? err.message : 'Error desconocido al crear el trade'
     return NextResponse.json(
-      { error: `Error al crear el trade: ${message}` },
+      { error: 'No se pudo registrar la operación' },
       { status: 500 },
     )
   }
