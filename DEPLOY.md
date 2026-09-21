@@ -16,7 +16,23 @@ Supabase** y el hosting es **Vercel**.
    npx prisma db seed          # inserta los catálogos del sistema
    ```
 
-## 2. Variables de entorno en Vercel
+## 2. Correo transaccional (Brevo)
+
+Kosmos exige confirmar el correo al registrarse, así que en producción **necesita
+poder enviar emails**. Se usa [Brevo](https://www.brevo.com) porque permite
+verificar un único remitente (tu propio correo) sin ser dueño de un dominio.
+
+1. Crea una cuenta en Brevo y genera una API key en **SMTP & API → API Keys**
+   (empieza por `xkeysib-`).
+2. Da de alta el remitente en **Senders, Domains & Dedicated IPs → Senders**.
+   Brevo envía un correo de confirmación a esa dirección y **no deja enviar hasta
+   que la validas**.
+3. Guarda la API key y la dirección del remitente para el paso siguiente.
+
+> Sin `BREVO_API_KEY`, en producción el registro devuelve error (en desarrollo el
+> enlace de verificación se imprime en la consola del servidor).
+
+## 3. Variables de entorno en Vercel
 
 En el proyecto de Vercel → **Settings → Environment Variables**, añade (Production
 y Preview):
@@ -27,14 +43,29 @@ y Preview):
 | `DIRECT_URL`      | Cadena directa `:5432`                                        |
 | `NEXTAUTH_SECRET` | 32 bytes hex (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`) |
 | `NEXTAUTH_URL`    | La URL pública del despliegue, p. ej. `https://kosmos.vercel.app` (sin `/` final) |
+| `BREVO_API_KEY`   | API key de Brevo (`xkeysib-…`)                               |
+| `BREVO_FROM_EMAIL`| Remitente **verificado** en Brevo                            |
+| `BREVO_FROM_NAME` | Opcional. Nombre visible del remitente (por defecto `Kosmos`) |
 
 > `NEXTAUTH_URL` debe coincidir con el dominio real de Vercel, o el login/logout
-> redirigirá a una URL incorrecta.
+> redirigirá a una URL incorrecta. Además es la base de los **enlaces de
+> verificación de correo**: si apunta a otro sitio, los usuarios recibirán enlaces
+> que no funcionan.
 
-## 3. Build
+## 4. Build
 
-No hace falta `vercel.json`: Vercel detecta Next.js automáticamente. El script de
-build ya ejecuta `prisma generate` antes de `next build`:
+Vercel detecta Next.js automáticamente. El único ajuste que lleva el repositorio es
+[`vercel.json`](vercel.json), que fija las funciones en la región `fra1`
+(Frankfurt) para que estén junto a la base de datos de Supabase y reducir la
+latencia de cada consulta:
+
+```json
+{ "regions": ["fra1"] }
+```
+
+Si tu proyecto de Supabase está en otra región, cambia `fra1` por la más cercana.
+
+El script de build ya ejecuta `prisma generate` antes de `next build`:
 
 ```json
 "build": "prisma generate && next build"
@@ -44,7 +75,14 @@ Las migraciones **no** se aplican en el build; ejecútalas una vez con
 `npx prisma migrate deploy` (localmente contra la BD de producción o desde un
 paso manual) cuando cambie el esquema.
 
-## 4. Comprobación
+## 5. Comprobación
 
-Tras el primer despliegue, abre la URL, regístrate y verifica que puedes iniciar
-sesión: eso confirma que la conexión al pooler de Supabase funciona en runtime.
+Tras el primer despliegue, abre la URL y comprueba el flujo completo:
+
+1. **Regístrate** con un correo real. Debe llegarte el correo de confirmación
+   (revisa spam la primera vez). Si no llega, mira `BREVO_API_KEY`,
+   `BREVO_FROM_EMAIL` y que el remitente esté verificado en Brevo.
+2. **Pulsa el enlace** y comprueba que apunta al dominio de Vercel, no a
+   `localhost`. Si apunta mal, revisa `NEXTAUTH_URL`.
+3. **Inicia sesión** y completa el onboarding. Esto confirma que la conexión al
+   pooler de Supabase funciona en runtime.

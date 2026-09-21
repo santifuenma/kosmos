@@ -2,6 +2,9 @@ erDiagram
     USER ||--o| STRATEGY : "define (0..1)"
     USER ||--o{ DAILY_INTENTION : "planifica"
     USER ||--o{ SESSION : "opera en"
+    USER ||--o{ VERIFICATION_TOKEN : "recibe"
+    USER |o--o{ ENTRY_CONDITION : "crea (personalizadas)"
+    USER |o--o{ BEHAVIORAL_RULE : "crea (personalizadas)"
 
     STRATEGY ||--o{ STRATEGY_CONDITION : "selecciona"
     STRATEGY ||--o{ STRATEGY_RULE : "selecciona"
@@ -23,10 +26,21 @@ erDiagram
     USER {
         String id PK
         String email UK
-        String password
-        String name "nullable"
+        String password "hash bcrypt"
+        String firstName
+        String lastName
+        String gender "MALE|FEMALE|OTHER|UNDISCLOSED (default UNDISCLOSED)"
+        DateTime emailVerified "nullable; null = no puede iniciar sesion"
         DateTime createdAt
         DateTime updatedAt
+    }
+
+    VERIFICATION_TOKEN {
+        String id PK
+        String userId FK
+        String token UK
+        DateTime expiresAt "24 h desde la emision"
+        DateTime createdAt
     }
 
     STRATEGY {
@@ -46,6 +60,9 @@ erDiagram
         String code UK
         String label
         String description
+        Boolean isActive "default true; false = soft delete del catalogo"
+        Boolean isCustom "default false; true = creada por un usuario"
+        String userId FK "nullable; autor si isCustom"
     }
 
     BEHAVIORAL_RULE {
@@ -54,6 +71,9 @@ erDiagram
         String label
         String description
         String scope "PER_TRADE | PER_SESSION"
+        Boolean isActive "default true; false = soft delete del catalogo"
+        Boolean isCustom "default false; true = creada por un usuario"
+        String userId FK "nullable; autor si isCustom"
     }
 
     STRATEGY_CONDITION {
@@ -74,7 +94,7 @@ erDiagram
         String id PK
         String userId FK
         String strategyId
-        DateTime date
+        DateTime date "UNIQUE junto a userId"
         Int maxTrades
         String tradingHoursStart
         String tradingHoursEnd
@@ -90,7 +110,7 @@ erDiagram
         String intentionId FK,UK
         DateTime date
         String status "OPEN | CLOSED (default OPEN)"
-        Float icoScore "nullable 0-100"
+        Float icoScore "nullable, escala 0-1 (se muestra como %)"
         DateTime createdAt
         DateTime closedAt "nullable"
     }
@@ -101,6 +121,7 @@ erDiagram
         DateTime timestamp
         String direction "LONG | SHORT"
         String result "WIN | LOSS | BREAKEVEN"
+        String asset "nullable, ticker (ej. QQQ)"
         Float pnlAmount "nullable"
         String notes "nullable"
         DateTime createdAt
@@ -118,6 +139,6 @@ erDiagram
     SESSION_VIOLATION {
         String id PK
         String sessionId FK
-        String ruleId FK
+        String ruleId FK "UNIQUE junto a sessionId"
         DateTime createdAt
     }
