@@ -21,7 +21,7 @@
 //   </Tooltip>
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 type TooltipProps = {
@@ -33,13 +33,11 @@ type TooltipProps = {
 }
 
 export function Tooltip({ children, text, position = 'below', wrapClassName }: TooltipProps) {
-  // `mounted` evita renderizar el portal durante SSR donde `document` no existe.
-  const [mounted, setMounted] = useState(false)
+  // `show` solo pasa a true desde un evento de ratón (siempre en el navegador),
+  // así que el portal nunca se renderiza en SSR y no hace falta un flag `mounted`.
   const [show, setShow] = useState(false)
   const [coords, setCoords] = useState({ top: 0, left: 0 })
   const wrapRef = useRef<HTMLSpanElement>(null)
-
-  useEffect(() => { setMounted(true) }, [])
 
   function updatePosition() {
     if (!wrapRef.current) return
@@ -69,7 +67,7 @@ export function Tooltip({ children, text, position = 'below', wrapClassName }: T
       >
         <span className="infoIcon">{children}</span>
       </span>
-      {mounted && show && createPortal(
+      {show && createPortal(
         <div
           className="tooltipFloat"
           style={{

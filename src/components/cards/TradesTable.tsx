@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Tooltip } from '@/components/ui/Tooltip'
 import styles from './TradesTable.module.css'
@@ -33,8 +33,6 @@ type TradesTableProps = {
 export function TradesTable({ trades, variant = 'static', showTotal = false }: TradesTableProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
 
   const hoveredTrade = trades.find((t) => t.id === hoveredId) ?? null
 
@@ -92,9 +90,10 @@ export function TradesTable({ trades, variant = 'static', showTotal = false }: T
     </p>
   }
 
-  // ── Limpiar refs antes de cada render ─────────────────────────────────
-  pnlRefs.current = []
-  violRefs.current = []
+  // Los refs no se reinician aquí: cada callback `ref={(el) => …}` es una
+  // función nueva en cada render, así que React llama a la anterior con `null`
+  // y luego a la nueva con el elemento antes de ejecutar el layout effect. Las
+  // posiciones que ya no existen quedan en `null`, que `equalize` descarta.
 
   // ── Static variant ──────────────────────────────────────────────────────
   if (variant === 'static') {
@@ -301,7 +300,7 @@ export function TradesTable({ trades, variant = 'static', showTotal = false }: T
         </tbody>
       </table>
 
-      {mounted && hoveredTrade && tooltipPos && (() => {
+      {hoveredTrade && tooltipPos && (() => {
         const text = buildRowTooltip(hoveredTrade)
         if (!text) return null
         return createPortal(

@@ -98,10 +98,14 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [todayIntention, setTodayIntention] = useState<TodayIntention | null | undefined>(undefined)
 
-  // Close sidebar whenever the route changes (user tapped a link).
-  useEffect(() => {
+  // Close sidebar whenever the route changes (user tapped a link). Se hace
+  // durante el render comparando con la ruta anterior (patrón de React para
+  // ajustar estado cuando cambia un valor) en lugar de en un efecto.
+  const [prevPathname, setPrevPathname] = useState(pathname)
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname)
     setIsOpen(false)
-  }, [pathname])
+  }
 
   // Solo la sección /session/* puede mutar la intención/sesión del día
   // (abrir, cerrar). Antes se refetchaba /api/intention en cada cambio de

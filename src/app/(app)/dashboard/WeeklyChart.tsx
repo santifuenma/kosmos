@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import {
   AreaChart,
   Area,
@@ -25,31 +25,30 @@ type WeeklyChartProps = {
   data: WeekDatum[]
 }
 
-function useIsTablet(maxWidth = 900): boolean {
-  const [isTablet, setIsTablet] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${maxWidth}px)`)
-    setIsTablet(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setIsTablet(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [maxWidth])
-  return isTablet
+// Recharts no acepta media queries en sus props, así que tenemos que conmutar
+// los valores en runtime. `useSyncExternalStore` es la API de React para leer un
+// valor externo (aquí `matchMedia`) y re-renderizar cuando cambia, sin copiarlo
+// a un estado desde un efecto. El tercer argumento (`false`) es el valor que se
+// usa en el servidor y durante la hidratación, donde no existe `window`.
+function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(query)
+      mq.addEventListener('change', onChange)
+      return () => mq.removeEventListener('change', onChange)
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  )
 }
 
-// Hook para detectar móvil (≤ 450px, mismo breakpoint que page.module.css).
-// Recharts no acepta media queries en sus props, así que tenemos que conmutar
-// los valores en runtime.
+function useIsTablet(maxWidth = 900): boolean {
+  return useMediaQuery(`(max-width: ${maxWidth}px)`)
+}
+
+// Móvil (≤ 450px, mismo breakpoint que page.module.css).
 function useIsMobile(maxWidth = 450): boolean {
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${maxWidth}px)`)
-    setIsMobile(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [maxWidth])
-  return isMobile
+  return useMediaQuery(`(max-width: ${maxWidth}px)`)
 }
 
 function formatWeekRange(startISO: string, endISO: string): string {

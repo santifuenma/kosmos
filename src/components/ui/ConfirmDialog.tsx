@@ -20,7 +20,7 @@
 //   />
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 
 type ConfirmDialogProps = {
   open: boolean
@@ -47,10 +47,17 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   // `visible` mantiene el componente montado mientras corre la animación de salida.
-  const [visible, setVisible] = useState(false)
+  const [visible, setVisible] = useState(open)
   const [closing, setClosing] = useState(false)
 
-  useEffect(() => {
+  // Reaccionamos al cambio de `open` durante el render, no en un efecto: React
+  // descarta este render y lo repite con el estado ya actualizado, sin pintar
+  // un fotograma intermedio ni encadenar renders. Es el patrón que la
+  // documentación de React recomienda para "ajustar estado cuando cambia una
+  // prop" (comparar con el valor anterior, guardado también en estado).
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setVisible(true)
       setClosing(false)
@@ -58,7 +65,7 @@ export function ConfirmDialog({
       // open pasó a false → arrancar animación de salida
       setClosing(true)
     }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const handleAnimEnd = useCallback(
     (e: React.AnimationEvent) => {
