@@ -81,6 +81,33 @@ export async function sendEmail({ to, subject, html, text }: SendEmailArgs): Pro
 // Correo de confirmación de cuenta
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Escapado del nombre en el HTML ──────────────────────────────────────────
+// `firstName` llega sin filtrar desde el formulario de registro y se interpola
+// en la plantilla de abajo. Sin escaparlo, alguien puede darse de alta con un
+// nombre que cierre la etiqueta e inyecte su propio marcado:
+//
+//   firstName = "</h1><a href=...>Confirma aquí</a>"
+//
+// Importa porque el destinatario del correo es la dirección que se registró, y
+// registrarse no exige demostrar que esa dirección sea tuya: el mensaje
+// manipulado acaba en el buzón de un tercero, enviado desde nuestro remitente
+// verificado y con nuestro SPF y DKIM detrás. Convertiría a Kosmos en un
+// reenviador de phishing con la reputación de su propio dominio.
+//
+// Escapamos en vez de restringir los caracteres admitidos en el registro
+// porque los nombres reales llevan apóstrofos y tildes ("O'Brien", "Núñez") y
+// una lista blanca terminaría rechazando usuarios legítimos.
+function escapeHtml(value: string): string {
+  return value
+    // El ampersand va primero: si no, volvería a escapar los que introducen
+    // las sustituciones siguientes y saldría "&amp;lt;" en lugar de "&lt;".
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 // ── Restricciones del maquetado de correo ───────────────────────────────────
 // El HTML de un correo no es el de una página. Lo que se hace aquí y por qué:
 //
@@ -102,6 +129,10 @@ export async function sendEmail({ to, subject, html, text }: SendEmailArgs): Pro
 //     reconozcan como lo mismo.
 export function verificationEmail(firstName: string, verifyUrl: string) {
   const subject = 'Confirma tu cuenta de Kosmos'
+
+  // Solo el HTML necesita escapado. La versión en texto plano no se interpreta
+  // como marcado, así que ahí el nombre va tal cual.
+  const safeFirstName = escapeHtml(firstName)
 
   const text =
     `Hola ${firstName},\n\n` +
@@ -152,7 +183,7 @@ export function verificationEmail(firstName: string, verifyUrl: string) {
         <tr>
           <td style="padding:34px 32px 0;">
             <h1 style="margin:0 0 14px;font-family:'Montserrat',Arial,Helvetica,sans-serif;font-size:21px;font-weight:600;color:#1c1c28;">
-              Hola ${firstName},
+              Hola ${safeFirstName},
             </h1>
             <p style="margin:0;font-family:'Montserrat',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;color:#55556a;">
               Confirma tu dirección de correo para activar tu cuenta y empezar a

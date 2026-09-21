@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -169,7 +170,16 @@ export default async function HistoryPage({ searchParams }: Props) {
   )
 
   // ── Feedback insights ────────────────────────────────────────────────────
-  const insights: string[] = []
+  //
+  // Los mensajes se construyen como nodos de React, no como cadenas de HTML.
+  // Antes eran cadenas con <strong> dentro que se pintaban con
+  // dangerouslySetInnerHTML, y varias de ellas interpolan el `label` de una
+  // regla o condicion. Esos labels los escribe el propio usuario al crear
+  // reglas personalizadas (POST /api/strategy/rules), asi que un titulo como
+  //   <img src=x onerror="...">
+  // se ejecutaba al abrir esta pagina. Con JSX el texto se escapa solo y el
+  // navegador nunca lo interpreta como marcado.
+  const insights: ReactNode[] = []
 
   // 1. Compare with previous month
   if (prevMonthSessions.length > 0 && sessionsWithIco.length > 0) {
@@ -177,9 +187,9 @@ export default async function HistoryPage({ searchParams }: Props) {
     const currentAvg = monthAvgIco!
     const diff = Math.round((currentAvg - prevAvg) * 100)
     if (diff > 0) {
-      insights.push(`Mejoraste <strong>+${diff}%</strong> respecto al mes anterior.`)
+      insights.push(<>Mejoraste <strong>+{diff}%</strong> respecto al mes anterior.</>)
     } else if (diff < 0) {
-      insights.push(`Tu ICO bajó <strong>${diff}%</strong> respecto al mes anterior.`)
+      insights.push(<>Tu ICO bajó <strong>{diff}%</strong> respecto al mes anterior.</>)
     } else {
       insights.push('Tu ICO se mantuvo igual respecto al mes anterior.')
     }
@@ -204,7 +214,7 @@ export default async function HistoryPage({ searchParams }: Props) {
 
   if (violationCounts.size > 0) {
     const sorted = Array.from(violationCounts.entries()).sort((a, b) => b[1] - a[1])
-    insights.push(`La regla "<strong>${sorted[0][0]}</strong>" fue la más violada este mes.`)
+    insights.push(<>La regla &quot;<strong>{sorted[0][0]}</strong>&quot; fue la más violada este mes.</>)
   }
 
   // 3. Day-of-week pattern
@@ -223,7 +233,7 @@ export default async function HistoryPage({ searchParams }: Props) {
   const maxDowIdx = dowRates.indexOf(maxDowRate)
 
   if (maxDowRate > 0 && dowSessions[maxDowIdx] >= 2) {
-    insights.push(`<strong>Patrón detectado:</strong> tiendes a violar reglas los <strong>${dayNames[maxDowIdx]}</strong>.`)
+    insights.push(<><strong>Patrón detectado:</strong> tiendes a violar reglas los <strong>{dayNames[maxDowIdx]}</strong>.</>)
   }
 
   // 4. Best emotional state
@@ -247,7 +257,7 @@ export default async function HistoryPage({ searchParams }: Props) {
     // @/types ("Neutral" frente a "Neutro"). Ahora la fuente es única y las
     // etiquetas concuerdan con el género declarado por el usuario.
     const label = emotionalStateLabel(bestState as EmotionalState, session.user.gender)
-    insights.push(`Mejor rendimiento cuando tu estado emocional es <strong>${label}</strong>.`)
+    insights.push(<>Mejor rendimiento cuando tu estado emocional es <strong>{label}</strong>.</>)
   }
 
   // 5. ICO ↔ P&L correlation
@@ -264,8 +274,10 @@ export default async function HistoryPage({ searchParams }: Props) {
     const highVerb = highAvg >= 0 ? 'ganaste' : 'perdiste'
     const lowVerb  = lowAvg  >= 0 ? 'ganaste' : 'perdiste'
     insights.push(
-      `Cuando fuiste disciplinado (ICO ≥ 80) <strong>${highVerb} ${fmt(highAvg)}</strong> de media.` +
-      ` Cuando no (ICO &lt; 60), <strong>${lowVerb} ${fmt(lowAvg)}</strong>.`
+      <>
+        Cuando fuiste disciplinado (ICO ≥ 80) <strong>{highVerb} {fmt(highAvg)}</strong> de media.
+        {' '}Cuando no (ICO &lt; 60), <strong>{lowVerb} {fmt(lowAvg)}</strong>.
+      </>
     )
   }
 
@@ -290,8 +302,10 @@ export default async function HistoryPage({ searchParams }: Props) {
     const recurring = Array.from(monthSets[0]).filter((rule) => monthSets.every((set) => set.has(rule)))
     if (recurring.length > 0) {
       insights.push(
-        `Llevas <strong>${rulesByMonth.size} meses seguidos</strong> violando` +
-        ` "<strong>${recurring[0]}</strong>". Es tu patrón de indisciplina más persistente.`
+        <>
+          Llevas <strong>{rulesByMonth.size} meses seguidos</strong> violando
+          {' '}&quot;<strong>{recurring[0]}</strong>&quot;. Es tu patrón de indisciplina más persistente.
+        </>
       )
     }
   }
@@ -381,9 +395,9 @@ export default async function HistoryPage({ searchParams }: Props) {
                 <div className={styles.statsDivider} />
                 <div className={styles.feedbackBody}>
                   {insights.length > 0 ? (
-                    insights.flatMap((text, i) => [
+                    insights.flatMap((insight, i) => [
                       i > 0 ? <div key={`div-${i}`} className={styles.feedbackDivider} /> : null,
-                      <p key={i} className={styles.feedbackText} dangerouslySetInnerHTML={{ __html: text }} />,
+                      <p key={i} className={styles.feedbackText}>{insight}</p>,
                     ]).filter(Boolean)
                   ) : (
                     <p className={styles.emptyFeedback}>
