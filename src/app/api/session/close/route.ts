@@ -3,6 +3,7 @@ import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 import { computeIco } from '@/lib/ico'
+import { readJsonBody } from '@/lib/validation'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/session/close
@@ -82,8 +83,21 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const body = await request.json()
+  const body = await readJsonBody(request)
+  if (!body) {
+    return NextResponse.json({ error: 'El cuerpo de la petición no es JSON válido' }, { status: 400 })
+  }
+
   const { sessionViolations: rawSessionViolationIds = [] } = body
+
+  // Sin esta comprobación, un valor que no sea array hace que el Set de abajo
+  // lance por no ser iterable y el endpoint responda 500 en lugar de 400.
+  if (!Array.isArray(rawSessionViolationIds)) {
+    return NextResponse.json(
+      { error: 'Las violaciones de sesión deben venir como una lista de ids' },
+      { status: 400 },
+    )
+  }
 
   // Deduplicamos por si el cliente envía el mismo ID dos veces.
   const uniqueSessionViolationIds: string[] = [...new Set<string>(rawSessionViolationIds)]

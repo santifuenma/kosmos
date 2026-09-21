@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
+import { TEXT_LIMITS, optionalText, readJsonBody } from '@/lib/validation'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Normalización de fechas
@@ -126,7 +127,17 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { emotionalState, notes } = await request.json()
+  const body = await readJsonBody(request)
+  if (!body) {
+    return NextResponse.json({ error: 'El cuerpo de la petición no es JSON válido' }, { status: 400 })
+  }
+
+  const { emotionalState } = body
+
+  const notes = optionalText(body.notes, 'Las notas', TEXT_LIMITS.notes)
+  if (!notes.ok) {
+    return NextResponse.json({ error: notes.error }, { status: 400 })
+  }
 
   if (!isValidEmotionalState(emotionalState)) {
     return NextResponse.json(
@@ -149,7 +160,7 @@ export async function POST(request: NextRequest) {
       tradingHoursStart: strategy.tradingHoursStart,
       tradingHoursEnd: strategy.tradingHoursEnd,
       emotionalState,
-      notes: notes?.trim() || null,
+      notes: notes.value,
       // confirmedAt queda null hasta que el trader confirme explícitamente.
     },
     include: intentionInclude,

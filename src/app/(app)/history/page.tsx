@@ -24,8 +24,21 @@ export default async function HistoryPage({ searchParams }: Props) {
 
   const params = await searchParams
   const now = new Date()
-  const year = params.year ? parseInt(params.year, 10) : now.getUTCFullYear()
-  const month = params.month ? parseInt(params.month, 10) : now.getUTCMonth() + 1
+  // Antes esto era parseInt() a secas. parseInt("abc") devuelve NaN,
+  // Date.UTC(NaN, ...) produce una fecha inválida y Prisma la rechaza con un
+  // error que nadie recoge: /history?year=abc respondía con un 500. Cualquier
+  // valor que no sea un número dentro de rango vuelve al mes actual, que es lo
+  // que el usuario esperaría al escribir una URL a mano.
+  const parsedYear = Number(params.year)
+  const parsedMonth = Number(params.month)
+
+  const year = Number.isInteger(parsedYear) && parsedYear >= 2000 && parsedYear <= 2100
+    ? parsedYear
+    : now.getUTCFullYear()
+
+  const month = Number.isInteger(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12
+    ? parsedMonth
+    : now.getUTCMonth() + 1
 
   const startOfMonth = new Date(Date.UTC(year, month - 1, 1))
   const startOfNextMonth = new Date(Date.UTC(year, month, 1))

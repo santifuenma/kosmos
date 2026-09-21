@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { TEXT_LIMITS, readJsonBody, requiredText } from '@/lib/validation'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/strategy/conditions
@@ -28,13 +29,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { label, description } = await request.json()
-
-  if (!label?.trim()) {
-    return NextResponse.json({ error: 'El título de la condición es obligatorio' }, { status: 400 })
+  const body = await readJsonBody(request)
+  if (!body) {
+    return NextResponse.json({ error: 'El cuerpo de la petición no es JSON válido' }, { status: 400 })
   }
-  if (!description?.trim()) {
-    return NextResponse.json({ error: 'La descripción de la condición es obligatoria' }, { status: 400 })
+
+  const label = requiredText(body.label, 'El título de la condición', TEXT_LIMITS.label)
+  if (!label.ok) {
+    return NextResponse.json({ error: label.error }, { status: 400 })
+  }
+
+  const description = requiredText(body.description, 'La descripción de la condición', TEXT_LIMITS.description)
+  if (!description.ok) {
+    return NextResponse.json({ error: description.error }, { status: 400 })
   }
 
   // El código solo se usa como identificador interno estable; para condiciones
@@ -48,8 +55,8 @@ export async function POST(request: NextRequest) {
     const condition = await tx.entryCondition.create({
       data: {
         code,
-        label: label.trim(),
-        description: description.trim(),
+        label: label.value,
+        description: description.value,
         isCustom: true,
         userId: session.user.id,
       },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
+import { TEXT_LIMITS, optionalText, readJsonBody } from '@/lib/validation'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/session/trade
@@ -22,6 +23,21 @@ import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 const VALID_DIRECTIONS = ['LONG', 'SHORT'] as const
 const VALID_RESULTS    = ['WIN', 'LOSS', 'BREAKEVEN'] as const
+
+type Direction = (typeof VALID_DIRECTIONS)[number]
+type Result    = (typeof VALID_RESULTS)[number]
+
+// Comprobaciones con forma de type guard (`v is Direction`) y no un simple
+// booleano. Así TypeScript sabe que después del if el valor ya es uno de los
+// permitidos, y deja de hacer falta afirmárselo con un `as` que no comprueba
+// nada en tiempo de ejecución.
+function isDirection(value: unknown): value is Direction {
+  return VALID_DIRECTIONS.includes(value as Direction)
+}
+
+function isResult(value: unknown): value is Result {
+  return VALID_RESULTS.includes(value as Result)
+}
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -72,49 +88,61 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const body = await request.json()
-  const {
-    direction,
-    result,
-    asset,
-    pnlAmount,
-    notes,
-    violations = {},
-  } = body
+  const body = await readJsonBody(request)
+  if (!body) {
+    return NextResponse.json({ error: 'El cuerpo de la petición no es JSON válido' }, { status: 400 })
+  }
 
-  const {
-    conditions: violatedConditionIds = [] as string[],
-    rules: violatedRuleIds = [] as string[],
-  } = violations
+  const { direction, result, pnlAmount, violations = {} } = body
+
+  // Las listas de violaciones vienen del cliente; si no son arrays, los bucles
+  // de más abajo recorrerían cualquier cosa y reventarían con un 500.
+  const { conditions: rawConditionIds = [], rules: rawRuleIds = [] } =
+    (violations ?? {}) as Record<string, unknown>
+
+  if (!Array.isArray(rawConditionIds) || !Array.isArray(rawRuleIds)) {
+    return NextResponse.json(
+      { error: 'Las violaciones deben venir como listas de ids' },
+      { status: 400 },
+    )
+  }
+
+  const violatedConditionIds = rawConditionIds as string[]
+  const violatedRuleIds = rawRuleIds as string[]
 
   // ── Validaciones de campos obligatorios ──────────────────────────────────
 
-  if (!VALID_DIRECTIONS.includes(direction)) {
+  if (!isDirection(direction)) {
     return NextResponse.json(
       { error: 'La dirección debe ser LONG o SHORT' },
       { status: 400 },
     )
   }
 
-  if (!VALID_RESULTS.includes(result)) {
+  if (!isResult(result)) {
     return NextResponse.json(
       { error: 'El resultado debe ser WIN, LOSS o BREAKEVEN' },
       { status: 400 },
     )
   }
 
-  if (pnlAmount !== undefined && pnlAmount !== null && typeof pnlAmount !== 'number') {
+  // Number.isFinite descarta además NaN e Infinity, que son números para
+  // typeof pero no valen como importe y entrarían tal cual en la columna.
+  if (pnlAmount !== undefined && pnlAmount !== null && !Number.isFinite(pnlAmount)) {
     return NextResponse.json(
       { error: 'El P&L debe ser un número' },
       { status: 400 },
     )
   }
 
-  if (asset !== undefined && asset !== null && typeof asset !== 'string') {
-    return NextResponse.json(
-      { error: 'El activo debe ser un texto' },
-      { status: 400 },
-    )
+  const asset = optionalText(body.asset, 'El activo', TEXT_LIMITS.asset)
+  if (!asset.ok) {
+    return NextResponse.json({ error: asset.error }, { status: 400 })
+  }
+
+  const notes = optionalText(body.notes, 'Las notas', TEXT_LIMITS.notes)
+  if (!notes.ok) {
+    return NextResponse.json({ error: notes.error }, { status: 400 })
   }
 
   // ── Validación de violaciones de condiciones ─────────────────────────────
@@ -162,9 +190,9 @@ export async function POST(request: NextRequest) {
         sessionId: todaySession.id,
         direction,
         result,
-        asset: typeof asset === 'string' ? asset.trim().toUpperCase() || null : null,
-        pnlAmount: pnlAmount ?? null,
-        notes: typeof notes === 'string' ? notes.trim() || null : null,
+        asset: asset.value?.toUpperCase() ?? null,
+        pnlAmount: (pnlAmount as number | null | undefined) ?? null,
+        notes: notes.value,
         violations: {
           create: [
             // Mapeamos StrategyCondition.id → EntryCondition.id para TradeViolation.

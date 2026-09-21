@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { TEXT_LIMITS, readJsonBody, requiredText } from '@/lib/validation'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/strategy/rules
@@ -34,15 +35,24 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { label, description, scope = 'PER_TRADE' } = await request.json()
+  const body = await readJsonBody(request)
+  if (!body) {
+    return NextResponse.json({ error: 'El cuerpo de la petición no es JSON válido' }, { status: 400 })
+  }
 
-  if (!label?.trim()) {
-    return NextResponse.json({ error: 'El título de la regla es obligatorio' }, { status: 400 })
+  const { scope = 'PER_TRADE' } = body
+
+  const label = requiredText(body.label, 'El título de la regla', TEXT_LIMITS.label)
+  if (!label.ok) {
+    return NextResponse.json({ error: label.error }, { status: 400 })
   }
-  if (!description?.trim()) {
-    return NextResponse.json({ error: 'La descripción de la regla es obligatoria' }, { status: 400 })
+
+  const description = requiredText(body.description, 'La descripción de la regla', TEXT_LIMITS.description)
+  if (!description.ok) {
+    return NextResponse.json({ error: description.error }, { status: 400 })
   }
-  if (!VALID_SCOPES.includes(scope)) {
+
+  if (typeof scope !== 'string' || !VALID_SCOPES.includes(scope)) {
     return NextResponse.json({ error: 'El alcance de la regla no es válido' }, { status: 400 })
   }
 
@@ -57,8 +67,8 @@ export async function POST(request: NextRequest) {
     const rule = await tx.behavioralRule.create({
       data: {
         code,
-        label: label.trim(),
-        description: description.trim(),
+        label: label.value,
+        description: description.value,
         scope,
         isCustom: true,
         userId: session.user.id,

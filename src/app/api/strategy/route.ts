@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { TEXT_LIMITS, optionalText, readJsonBody, requiredText } from '@/lib/validation'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Parámetros de include reutilizados en las tres operaciones.
@@ -29,6 +30,13 @@ const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
 // opcional. Se fuerzan a isActive: true al crear estrategias nuevas, sin
 // excepción (ver POST). Las estrategias ya existentes no se tocan.
 const MANDATORY_RULE_CODES = ['MAX_TRADES_LIMIT', 'TRADING_HOURS']
+
+// Comprueba el formato y de paso estrecha el tipo: TIME_REGEX.test() acepta
+// cualquier cosa y la convierte a cadena por su cuenta, así que sin este guard
+// un número pasaría por la validación y llegaría a timeToMinutes.
+function isTime(value: unknown): value is string {
+  return typeof value === 'string' && TIME_REGEX.test(value)
+}
 
 // Convierte una hora "HH:mm" a minutos desde medianoche para comparar rangos.
 function timeToMinutes(time: string): number {
@@ -98,41 +106,49 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const {
-    name, description, maxTrades, tradingHoursStart, tradingHoursEnd,
-    activeConditionIds, activeRuleIds,
-  } = await request.json()
+  const body = await readJsonBody(request)
+  if (!body) {
+    return NextResponse.json({ error: 'El cuerpo de la petición no es JSON válido' }, { status: 400 })
+  }
 
-  if (!name?.trim()) {
-    return NextResponse.json(
-      { error: 'El nombre de la estrategia es obligatorio' },
-      { status: 400 },
-    )
+  const {
+    maxTrades, tradingHoursStart, tradingHoursEnd,
+    activeConditionIds, activeRuleIds,
+  } = body
+
+  const name = requiredText(body.name, 'El nombre de la estrategia', TEXT_LIMITS.strategyName)
+  if (!name.ok) {
+    return NextResponse.json({ error: name.error }, { status: 400 })
+  }
+
+  const description = optionalText(body.description, 'La descripción', TEXT_LIMITS.description)
+  if (!description.ok) {
+    return NextResponse.json({ error: description.error }, { status: 400 })
   }
 
   // Validamos los límites operativos solo si el cliente los envía explícitamente.
   // Si no vienen, Prisma aplicará los valores @default del schema.
-  if (maxTrades !== undefined && (!Number.isInteger(maxTrades) || maxTrades < 1)) {
+  if (maxTrades !== undefined && (!Number.isInteger(maxTrades) || (maxTrades as number) < 1)) {
     return NextResponse.json(
       { error: 'El máximo de operaciones debe ser un número entero mayor que 0' },
       { status: 400 },
     )
   }
-  if (tradingHoursStart !== undefined && !TIME_REGEX.test(tradingHoursStart)) {
+  if (tradingHoursStart !== undefined && !isTime(tradingHoursStart)) {
     return NextResponse.json(
       { error: 'El horario de inicio debe tener formato HH:mm' },
       { status: 400 },
     )
   }
-  if (tradingHoursEnd !== undefined && !TIME_REGEX.test(tradingHoursEnd)) {
+  if (tradingHoursEnd !== undefined && !isTime(tradingHoursEnd)) {
     return NextResponse.json(
       { error: 'El horario de fin debe tener formato HH:mm' },
       { status: 400 },
     )
   }
   if (
-    tradingHoursStart !== undefined &&
-    tradingHoursEnd !== undefined &&
+    isTime(tradingHoursStart) &&
+    isTime(tradingHoursEnd) &&
     timeToMinutes(tradingHoursStart) >= timeToMinutes(tradingHoursEnd)
   ) {
     return NextResponse.json(
@@ -174,11 +190,11 @@ export async function POST(request: NextRequest) {
   const strategy = await prisma.strategy.create({
     data: {
       userId: session.user.id,
-      name: name.trim(),
-      description: description?.trim() || null,
+      name: name.value,
+      description: description.value,
       // Solo incluimos los límites si el cliente los envió; de lo contrario
       // Prisma usa los @default del schema y el código queda limpio.
-      ...(maxTrades !== undefined && { maxTrades }),
+      ...(maxTrades !== undefined && { maxTrades: maxTrades as number }),
       ...(tradingHoursStart !== undefined && { tradingHoursStart }),
       ...(tradingHoursEnd !== undefined && { tradingHoursEnd }),
       // Creamos los vínculos con el catálogo dentro del mismo create de Prisma
@@ -218,44 +234,55 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { name, description, maxTrades, tradingHoursStart, tradingHoursEnd } = body
+  const body = await readJsonBody(request)
+  if (!body) {
+    return NextResponse.json({ error: 'El cuerpo de la petición no es JSON válido' }, { status: 400 })
+  }
+
+  const { maxTrades, tradingHoursStart, tradingHoursEnd } = body
+
+  const name = requiredText(body.name, 'El nombre de la estrategia', TEXT_LIMITS.strategyName)
+  if (body.name !== undefined && !name.ok) {
+    return NextResponse.json({ error: name.error }, { status: 400 })
+  }
+
+  const description = optionalText(body.description, 'La descripción', TEXT_LIMITS.description)
+  if (!description.ok) {
+    return NextResponse.json({ error: description.error }, { status: 400 })
+  }
 
   // Construimos el objeto de actualización dinámicamente con solo los campos
   // recibidos, para que el cliente pueda enviar un subconjunto sin pisar los demás.
   // Prisma acepta un tipo mixto (string | number | null) en el objeto de datos.
   const data: Record<string, string | number | null> = {}
 
-  if (name !== undefined) data.name = name.trim()
-  if (description !== undefined) data.description = description?.trim() || null
-  if (maxTrades !== undefined) data.maxTrades = maxTrades
-  if (tradingHoursStart !== undefined) data.tradingHoursStart = tradingHoursStart
-  if (tradingHoursEnd !== undefined) data.tradingHoursEnd = tradingHoursEnd
+  if (body.name !== undefined && name.ok) data.name = name.value
+  if (body.description !== undefined) data.description = description.value
+  if (maxTrades !== undefined) data.maxTrades = maxTrades as number
+  if (tradingHoursStart !== undefined) data.tradingHoursStart = tradingHoursStart as string
+  if (tradingHoursEnd !== undefined) data.tradingHoursEnd = tradingHoursEnd as string
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 })
   }
 
   // Validaciones de los campos recibidos
-  if (data.name === '') {
-    return NextResponse.json({ error: 'El nombre no puede estar vacío' }, { status: 400 })
-  }
   if (
     maxTrades !== undefined &&
-    (!Number.isInteger(maxTrades) || maxTrades < 1)
+    (!Number.isInteger(maxTrades) || (maxTrades as number) < 1)
   ) {
     return NextResponse.json(
       { error: 'El máximo de operaciones debe ser un número entero mayor que 0' },
       { status: 400 },
     )
   }
-  if (tradingHoursStart !== undefined && !TIME_REGEX.test(tradingHoursStart)) {
+  if (tradingHoursStart !== undefined && !isTime(tradingHoursStart)) {
     return NextResponse.json(
       { error: 'El horario de inicio debe tener formato HH:mm' },
       { status: 400 },
     )
   }
-  if (tradingHoursEnd !== undefined && !TIME_REGEX.test(tradingHoursEnd)) {
+  if (tradingHoursEnd !== undefined && !isTime(tradingHoursEnd)) {
     return NextResponse.json(
       { error: 'El horario de fin debe tener formato HH:mm' },
       { status: 400 },
@@ -266,7 +293,7 @@ export async function PUT(request: NextRequest) {
   // o cuando una viene y la otra ya está en BD. Para el segundo caso,
   // necesitaríamos leer la estrategia primero; por ahora validamos solo
   // cuando ambas se envían juntas (el cliente envía siempre las dos).
-  if (tradingHoursStart !== undefined && tradingHoursEnd !== undefined) {
+  if (isTime(tradingHoursStart) && isTime(tradingHoursEnd)) {
     if (timeToMinutes(tradingHoursStart) >= timeToMinutes(tradingHoursEnd)) {
       return NextResponse.json(
         { error: 'El horario de inicio debe ser anterior al de fin' },
