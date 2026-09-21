@@ -421,6 +421,8 @@ Producción: **Vercel** (funciones fijadas a `fra1` en [`vercel.json`](vercel.js
 - Configura en Vercel las variables de entorno (Production y Preview); `NEXTAUTH_URL` debe coincidir con el dominio real.
 - El build ejecuta `prisma generate`, pero **no aplica migraciones**: lanza `npx prisma migrate deploy` cuando cambie el esquema.
 - En runtime la app usa el *pooler* de transacción; las migraciones usan la conexión directa.
+- Tras fusionar cambios que añadan migraciones, comprueba con `npx prisma migrate status` que producción está al día (ver [`DEPLOY.md`](DEPLOY.md#6-tras-cambiar-el-esquema-o-los-datos-maestros)).
+- **Keep-alive de Supabase Free:** el plan gratuito pausa los proyectos tras una semana sin actividad. Un repositorio privado aparte (`db-keepalive`) hace un latido diario en una tabla propia que no toca los datos de Kosmos. Detalles en [`DEPLOY.md`](DEPLOY.md#7-mantener-el-proyecto-activo-supabase-free).
 
 ## Estructura del repositorio
 

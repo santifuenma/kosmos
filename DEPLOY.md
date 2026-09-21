@@ -73,7 +73,8 @@ El script de build ya ejecuta `prisma generate` antes de `next build`:
 
 Las migraciones **no** se aplican en el build; ejecútalas una vez con
 `npx prisma migrate deploy` (localmente contra la BD de producción o desde un
-paso manual) cuando cambie el esquema.
+paso manual) cuando cambie el esquema. Ver la sección
+[«Tras cambiar el esquema»](#6-tras-cambiar-el-esquema-o-los-datos-maestros).
 
 ## 5. Comprobación
 
@@ -86,3 +87,38 @@ Tras el primer despliegue, abre la URL y comprueba el flujo completo:
    `localhost`. Si apunta mal, revisa `NEXTAUTH_URL`.
 3. **Inicia sesión** y completa el onboarding. Esto confirma que la conexión al
    pooler de Supabase funciona en runtime.
+
+## 6. Tras cambiar el esquema o los datos maestros
+
+Como las migraciones no se aplican solas, es fácil desplegar código nuevo con la
+base de datos por detrás. Después de fusionar a `master` un cambio que incluya
+una carpeta nueva en `prisma/migrations/`:
+
+```bash
+npx prisma migrate status   # ¿hay migraciones sin aplicar?
+npx prisma migrate deploy   # aplícalas a producción
+```
+
+`migrate status` es de solo lectura, así que puedes lanzarlo siempre que dudes.
+Conviene leer el `migration.sql` antes de aplicarla: algunas migraciones de este
+proyecto son solo de datos (por ejemplo, desactivar reglas obsoletas) y no
+cambian la estructura.
+
+## 7. Mantener el proyecto activo (Supabase Free)
+
+El plan gratuito de Supabase **pausa los proyectos tras una semana sin actividad
+de base de datos**. Para evitarlo, un repositorio privado aparte,
+`db-keepalive`, ejecuta cada día (06:17 UTC) una escritura mínima en una tabla
+propia (`keepalive.heartbeat`, esquema `keepalive`) que no interfiere con las
+tablas de Kosmos ni con las migraciones de Prisma.
+
+- Kosmos entra por el secret `DB_URL_KOSMOS` de ese repositorio (la misma
+  `DATABASE_URL` del pooler que usa la aplicación). **Si cambias la contraseña de
+  la base de datos, actualiza también ese secret**:
+  `gh secret set DB_URL_KOSMOS --repo santifuenma/db-keepalive`
+- Comprobar que sigue funcionando:
+  `gh run list --repo santifuenma/db-keepalive --workflow "Keep-alive"`.
+  Si una ejecución falla, GitHub envía un correo.
+- Si el proyecto llegara a pausarse, el keep-alive no puede reanimarlo: hay que
+  restaurarlo desde el panel de Supabase (se conservan los datos).
+- Para ver el último latido: `SELECT * FROM keepalive.heartbeat;`
