@@ -39,7 +39,6 @@ Plataforma de análisis conductual para traders novatos basada en el **ICO — �
 - [Despliegue](#despliegue)
 - [Estructura del repositorio](#estructura-del-repositorio)
 - [Decisiones de diseño](#decisiones-de-diseño)
-- [Limitaciones conocidas](#limitaciones-conocidas)
 
 ---
 
@@ -154,10 +153,6 @@ Sembrado por [`prisma/seed.ts`](prisma/seed.ts). Cada usuario activa las que apl
 | `NO_REVENGE_TRADE` | Sin Trade de Venganza | `PER_TRADE` | |
 | `TRADING_HOURS` | Horario Respetado | `PER_TRADE` | **Obligatoria**; se pre-marca al operar fuera de horario |
 | `MAX_TRADES_LIMIT` | Máx. Operaciones | `PER_SESSION` | **Obligatoria**; se pre-marca al superar el límite |
-| `CONDITIONS_MET` | Condiciones OK | `PER_TRADE` | Desactivada: duplicaba el conteo de las condiciones de entrada |
-| `STRATEGY_FOLLOWED` | Estrategia OK | `PER_SESSION` | Desactivada: imposible de violar (la estrategia está bloqueada con sesión abierta) |
-
-Las entradas desactivadas se conservan en BD (*soft delete*, `isActive = false`) para no romper las violaciones históricas que las referencian.
 
 ## Stack tecnológico
 
@@ -406,7 +401,7 @@ Plantilla completa y comentada en [`.env.example`](.env.example).
 | `npx prisma migrate deploy` | Aplica las migraciones pendientes. |
 | `npx prisma db seed` | Siembra los catálogos (destructivo, ver aviso). |
 | `npx prisma studio` | Explorador web de la base de datos. |
-| `npx tsx prisma/reset-password.ts <email> <pass>` | Restablece la contraseña de un usuario (no hay recuperación en la app). |
+| `npx tsx prisma/reset-password.ts <email> <pass>` | Restablece la contraseña de un usuario desde la terminal. |
 
 ## Testing y calidad
 
@@ -476,15 +471,6 @@ src/
 - **Catálogo estable con *soft delete*.** Las violaciones guardan el ID del catálogo (no del vínculo por usuario) y los elementos retirados se desactivan en vez de borrarse, de modo que el historial nunca se corrompe.
 - **Días en UTC.** Todo el cálculo de "hoy" y de semanas es en UTC para no depender del huso horario del cliente.
 - **Fórmulas puras y aisladas.** Facilitan el testeo y permiten reutilizarlas desde API routes y Server Components.
-
-## Limitaciones conocidas
-
-Alcance de MVP asumido en el TFG:
-
-- Una única estrategia por usuario y **sin versionado**: el detalle de una sesión muestra la estrategia actual, no la vigente ese día.
-- Sin recuperación de contraseña desde la app (existe un script de emergencia).
-- Los tokens JWT no se pueden invalidar en servidor antes de su caducidad.
-- Interfaz y textos únicamente en español.
 
 ---
 
