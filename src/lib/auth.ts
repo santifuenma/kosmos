@@ -20,6 +20,13 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { parseGender, type Gender } from '@/lib/gender'
 import { normalizeEmail } from '@/lib/emailAddress'
+import {
+  RATE_LIMITS,
+  clearRateLimit,
+  consumeRateLimit,
+  getClientIp,
+  isRateLimited,
+} from '@/lib/rateLimit'
 
 // Hash de una cadena aleatoria que nadie conoce, generado con el mismo coste
 // que los reales. Sirve para gastar el mismo tiempo cuando el correo no existe
@@ -46,22 +53,48 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Contraseña', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         // Si faltan campos devolvemos null, lo que NextAuth interpreta como
         // credenciales inválidas y muestra el error al cliente.
         if (!credentials?.email || !credentials?.password) {
           return null
         }
 
+        // La dirección se normaliza igual que al registrarse; si no, quien se
+        // dio de alta escribiendo su correo de una forma no entraría al
+        // teclearlo de otra.
+        const email = normalizeEmail(credentials.email)
+
+        // ── Límite de intentos ────────────────────────────────────────────
+        // Llevamos dos contadores en paralelo porque tapan agujeros distintos:
+        // el de IP frena a quien prueba muchas contraseñas desde un sitio, y el
+        // de cuenta frena a quien reparte los intentos entre muchas IPs para
+        // esquivar al primero.
+        //
+        // Aquí solo se comprueba; los intentos se anotan más abajo y únicamente
+        // cuando fallan. Si contáramos también los aciertos, quien entra y sale
+        // varias veces en una mañana acabaría bloqueándose a sí mismo.
+        const ipKey = `login:ip:${getClientIp(req?.headers ?? {})}`
+        const emailKey = `login:email:${email}`
+
+        const [ipBlocked, emailBlocked] = await Promise.all([
+          isRateLimited(ipKey, RATE_LIMITS.login),
+          isRateLimited(emailKey, RATE_LIMITS.login),
+        ])
+
+        // Lanzamos en vez de devolver null para que el cliente pueda decir que
+        // el problema es el número de intentos y no la contraseña. El mismo
+        // mecanismo que usa EMAIL_NOT_VERIFIED unas líneas más abajo.
+        if (ipBlocked || emailBlocked) {
+          throw new Error('RATE_LIMITED')
+        }
+
         // Buscamos el usuario por email. Si no existe, devolvemos null
         // deliberadamente sin distinguir entre "email no encontrado" y
         // "contraseña incorrecta". Dar mensajes distintos facilitaría
         // la enumeración de usuarios registrados.
-        // La dirección se normaliza igual que al registrarse; si no, quien se
-        // dio de alta escribiendo su correo de una forma no entraría al
-        // teclearlo de otra.
         const user = await prisma.user.findUnique({
-          where: { email: normalizeEmail(credentials.email) },
+          where: { email },
         })
 
         // bcrypt.compare es el método seguro para verificar contraseñas hasheadas.
@@ -77,7 +110,20 @@ export const authOptions: NextAuthOptions = {
           user?.password ?? DUMMY_PASSWORD_HASH,
         )
 
-        if (!user || !passwordMatch) return null
+        if (!user || !passwordMatch) {
+          // Solo los fallos gastan cupo.
+          await Promise.all([
+            consumeRateLimit(ipKey, RATE_LIMITS.login),
+            consumeRateLimit(emailKey, RATE_LIMITS.login),
+          ])
+          return null
+        }
+
+        // Contraseña correcta: quien está al otro lado ha demostrado que la
+        // sabe, así que los fallos anteriores dejan de contar contra él. Va
+        // antes de la comprobación de cuenta confirmada a propósito, porque el
+        // usuario sin confirmar tampoco es quien nos preocupa.
+        await Promise.all([clearRateLimit(ipKey), clearRateLimit(emailKey)])
 
         // Cuenta sin confirmar: la comprobación va DESPUÉS de validar la
         // contraseña a propósito. Si avisáramos antes, cualquiera podría

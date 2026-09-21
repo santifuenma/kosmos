@@ -19,12 +19,28 @@ import { parseGender, GENDER_OPTIONS } from '@/lib/gender'
 import { sendVerificationEmail } from '@/lib/verification'
 import { validatePassword } from '@/lib/password'
 import { EMAIL_REGEX, normalizeEmail } from '@/lib/emailAddress'
+import { RATE_LIMITS, consumeRateLimit, getClientIp } from '@/lib/rateLimit'
 
 // Límite defensivo: sin él, un nombre de 10 MB llegaría hasta la BD.
 const MAX_NAME_LENGTH = 80
 
 export async function POST(request: NextRequest) {
   try {
+    // Cada registro dispara un correo, así que sin tope este endpoint sirve
+    // para llenarle el buzón a cualquiera y agotar la cuota diaria de Brevo.
+    // El contador va por IP: la dirección de destino la elige quien ataca, de
+    // modo que limitarla a ella no frenaría nada.
+    const attempt = await consumeRateLimit(
+      `register:ip:${getClientIp(request.headers)}`,
+      RATE_LIMITS.register,
+    )
+    if (!attempt.allowed) {
+      return NextResponse.json(
+        { error: 'Demasiados registros desde esta conexión. Inténtalo más tarde.' },
+        { status: 429, headers: { 'Retry-After': String(attempt.retryAfterSeconds) } },
+      )
+    }
+
     const body = await request.json()
     const { email, password, firstName, lastName, gender } = body
 
@@ -85,6 +101,13 @@ export async function POST(request: NextRequest) {
     // la misma dirección escrita con otra caja pase el control de duplicados.
     const normalizedEmail = normalizeEmail(email)
 
+    // Este 409 admite que la dirección ya está registrada, así que cualquiera
+    // puede usar el endpoint para comprobar si una cuenta existe. Es una
+    // decisión tomada, no un descuido: la alternativa sin fugas es responder
+    // siempre lo mismo y avisar por correo al dueño de que alguien intentó
+    // registrarse con su dirección, y para una herramienta de uso personal el
+    // coste en claridad no compensa. El límite de intentos de arriba impide
+    // que la comprobación se haga en masa, que es lo que la haría útil.
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } })
     if (existing) {
       return NextResponse.json(

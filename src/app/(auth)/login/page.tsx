@@ -68,6 +68,13 @@ export default function LoginPage() {
         setUnverified(true)
         return
       }
+      // Cupo de intentos agotado. Conviene decirlo en lugar de repetir
+      // "contraseña incorrecta": quien acierte a la undécima se volvería loco
+      // buscando un fallo que no está en lo que escribe.
+      if (result.error.includes('RATE_LIMITED')) {
+        setError('Demasiados intentos fallidos. Espera unos minutos antes de volver a intentarlo.')
+        return
+      }
       // Para el resto no distinguimos entre "email no encontrado" y "contraseña
       // incorrecta" intencionadamente: un mensaje genérico dificulta la
       // enumeración de cuentas existentes a un posible atacante.
