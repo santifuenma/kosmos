@@ -46,6 +46,7 @@ y Preview):
 | `BREVO_API_KEY`   | API key de Brevo (`xkeysib-…`)                               |
 | `BREVO_FROM_EMAIL`| Remitente **verificado** en Brevo                            |
 | `BREVO_FROM_NAME` | Opcional. Nombre visible del remitente (por defecto `Kosmos`) |
+| `DEMO_DATABASE_URL` | Opcional. Conexión de solo lectura del demo público; ver [§8](#8-demo-público-de-solo-lectura) |
 
 > `NEXTAUTH_URL` debe coincidir con el dominio real de Vercel, o el login/logout
 > redirigirá a una URL incorrecta. Además es la base de los **enlaces de
@@ -122,3 +123,48 @@ tablas de Kosmos ni con las migraciones de Prisma.
 - Si el proyecto llegara a pausarse, el keep-alive no puede reanimarlo: hay que
   restaurarlo desde el panel de Supabase (se conservan los datos).
 - Para ver el último latido: `SELECT * FROM keepalive.heartbeat;`
+
+## 8. Demo público de solo lectura
+
+`/api/demo-login` abre una sesión con la cuenta `usuarioprueba@gmail.com` (la
+que siembra `prisma/seed-testuser.ts`) y lleva al dashboard. Es el destino del
+botón «Ver demo» del portfolio: `https://<tu-dominio>/api/demo-login`.
+
+### Qué impide que el demo escriba
+
+| Capa | Dónde | Qué hace |
+| --- | --- | --- |
+| Postgres | Rol `kosmos_demo` (migración `demo_read_only_role`) | Solo tiene `SELECT`, sus policies RLS solo le enseñan las filas del demo y sus transacciones son de solo lectura. No puede leer `password` ni las tablas de tokens o límites. |
+| Aplicación | `dbFor()` en `src/lib/prisma.ts` | Toda consulta hecha en nombre del demo va por la conexión `DEMO_DATABASE_URL`, es decir, con ese rol. Si falta la variable, falla en vez de usar la conexión completa. |
+| Proxy | `src/proxy.ts` | Responde 403 a cualquier `POST`/`PUT`/`PATCH`/`DELETE` del demo contra la API, y lo aparta de `/session/new` y `/session/active`. |
+| Interfaz | Layout, dashboard, estrategia, navbar | Banner de solo lectura y botones de crear/editar ocultos o desactivados. Solo cosmético. |
+
+La API REST de Supabase (la que se usa con la clave `anon`) queda cerrada aparte:
+la misma migración retira a `anon` y `authenticated` todos los permisos sobre
+las tablas de `public`, y RLS sigue activado sin policies para ellos.
+
+### Puesta en marcha
+
+1. Aplica la migración: `npx prisma migrate deploy`. Crea el rol **sin**
+   permiso para conectarse.
+2. Dale contraseña, desde el SQL Editor de Supabase o `psql` con `DIRECT_URL`
+   (genera una con `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`):
+   ```sql
+   ALTER ROLE kosmos_demo WITH LOGIN PASSWORD '<contraseña>';
+   ```
+3. Construye `DEMO_DATABASE_URL` copiando `DATABASE_URL` y cambiando solo el
+   usuario (`postgres.<ref>` → `kosmos_demo.<ref>`) y la contraseña. Añádela a
+   `.env` y a Vercel (Production y Preview) y vuelve a desplegar.
+
+Sin `DEMO_DATABASE_URL`, `/api/demo-login` responde 503 y el resto de la app
+funciona igual.
+
+### Comprobar que no puede escribir
+
+```bash
+node scripts/check-demo-readonly.mjs
+```
+
+Se conecta como `kosmos_demo` e intenta insertar, borrar, quitarse el modo de
+solo lectura, darse permisos o leer datos de otros. Todo debe salir `OK`. Cada
+intento se deshace al terminar, así que es seguro lanzarlo contra producción.
