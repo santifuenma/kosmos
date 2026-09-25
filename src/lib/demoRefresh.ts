@@ -30,6 +30,7 @@ import {
   DEMO_CUSTOM_RULE,
   DEMO_DATASET_VERSION,
   DEMO_STRATEGY,
+  DEMO_USER_NAME,
   buildDemoDataset,
   type DemoDay,
 } from '@/lib/demoDataset'
@@ -92,6 +93,9 @@ type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 
 async function rewriteDemoData(tx: Tx, userId: string, days: DemoDay[]) {
   const v = DEMO_DATASET_VERSION
+
+  // ── 0. Nombre de la cuenta demo ──────────────────────────────────────────
+  await tx.user.update({ where: { id: userId }, data: DEMO_USER_NAME })
 
   // ── 1. Borrar el historial anterior ──────────────────────────────────────
   // Borrar las sesiones arrastra en cascada trades y violaciones. Las

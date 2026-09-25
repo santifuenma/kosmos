@@ -26,7 +26,10 @@ import { getStartOfToday } from '@/lib/dates'
 
 // Cambiar este número obliga a regenerar el demo aunque ya estuviera al día:
 // forma parte de los ids, y la comprobación de "está al día" compara ids.
-export const DEMO_DATASET_VERSION = 2
+export const DEMO_DATASET_VERSION = 3
+
+// Nombre con el que la app saluda al visitante: "Hola, Bienvenido".
+export const DEMO_USER_NAME = { firstName: 'Bienvenido', lastName: '' }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Estrategia de ejemplo
