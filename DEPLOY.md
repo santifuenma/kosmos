@@ -138,6 +138,27 @@ navegador y se borra cada vez que entra por `/api/demo-login` o pulsa
 «Empezar de cero» en el banner. Las rutas de ese flujo llaman a
 [`demoActions.ts`](src/lib/demoActions.ts) cuando la sesión es la del demo.
 
+### Historial de ejemplo que se mueve con el calendario
+
+La estrategia y las sesiones del demo no son fijas: las genera
+[`demoDataset.ts`](src/lib/demoDataset.ts) a partir de la fecha de hoy (el mes
+actual hasta ayer y los dos anteriores). Cada día del mes sale siempre igual, así
+que es el mismo historial desplazado al calendario actual, con un trader que va
+mejorando mes a mes.
+
+La primera entrada al demo de cada día lo regenera
+([`demoRefresh.ts`](src/lib/demoRefresh.ts)): borra el historial de la cuenta
+demo y lo vuelve a escribir en una transacción, con un cerrojo para que dos
+visitas simultáneas no lo hagan a la vez. Tarda unos segundos y solo toca filas de
+la cuenta demo. Para forzarlo a mano (por ejemplo, tras cambiar el generador):
+
+```bash
+npm run demo:refresh
+```
+
+Si cambias el generador, sube `DEMO_DATASET_VERSION`: forma parte de los ids y
+obliga a regenerar aunque los datos ya fueran de hoy.
+
 ### Qué impide que el demo escriba
 
 | Capa | Dónde | Qué hace |

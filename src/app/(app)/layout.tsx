@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
 import { isDemoUser } from '@/lib/demo'
+import { ensureDemoDataFresh } from '@/lib/demoRefresh'
 import Navbar from '@/components/layout/Navbar'
 import LiquidBackground from '@/components/LiquidBackground'
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow'
@@ -33,6 +34,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
   const db = dbFor(session.user)
+
+  // Demo público: si el visitante sigue dentro cuando cambia el día, el
+  // historial se pone al día aquí (normalmente ya lo hizo /api/demo-login y
+  // esto no consulta nada; ver src/lib/demoRefresh.ts).
+  if (isDemoUser(session.user.email)) await ensureDemoDataFresh()
 
   // select mínimo: solo interesa si existe, no sus datos.
   const strategy = await db.strategy.findUnique({

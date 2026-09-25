@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { dbFor, isDemoDatabaseConfigured } from '@/lib/prisma'
 import { DEMO_USER_EMAIL } from '@/lib/demo'
 import { DEMO_SANDBOX_COOKIE } from '@/lib/demoSandbox'
+import { ensureDemoDataFresh } from '@/lib/demoRefresh'
 import { parseGender } from '@/lib/gender'
 import { RATE_LIMITS, consumeRateLimit, getClientIp } from '@/lib/rateLimit'
 
@@ -70,6 +71,10 @@ export async function GET(request: NextRequest) {
     return demoUnavailable()
   }
   if (!user) return demoUnavailable()
+
+  // El historial de ejemplo se mueve con el calendario: la primera entrada de
+  // cada día lo regenera para que termine ayer (ver src/lib/demoRefresh.ts).
+  await ensureDemoDataFresh()
 
   // Los mismos campos que dejan en el token el login normal de NextAuth
   // (name, email, sub) y nuestro callback jwt de src/lib/auth.ts.
