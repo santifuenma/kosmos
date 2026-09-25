@@ -74,10 +74,14 @@ export default withAuth(
         // /verify va en la lista porque es el destino del enlace de confirmación
         // del correo: por definición quien lo abre todavía no puede autenticarse,
         // así que exigirle sesión haría imposible confirmar la cuenta.
+        //
+        // /api/demo-login es justo la ruta que abre la sesión del demo; quien
+        // llega desde el portfolio todavía no tiene ninguna.
         if (
           pathname === '/login' ||
           pathname === '/register' ||
           pathname === '/verify' ||
+          pathname === '/api/demo-login' ||
           pathname.startsWith('/api/auth')
         ) {
           return true

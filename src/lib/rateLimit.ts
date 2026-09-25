@@ -41,6 +41,10 @@ export const RATE_LIMITS = {
   login: { limit: 10, windowMs: 15 * MINUTE },
   register: { limit: 5, windowMs: HOUR },
   resendVerification: { limit: 5, windowMs: HOUR },
+  // Entrar al demo no pide contraseña, así que no hay nada que adivinar: el
+  // tope solo evita que alguien martillee la ruta para cargar la base de
+  // datos. Veinte visitas por hora desde una IP sobran para cualquier persona.
+  demoLogin: { limit: 20, windowMs: HOUR },
 } satisfies Record<string, RateLimitRule>
 
 // La ventana más larga de todas: la purga borra lo que ya quedó fuera de ella.
