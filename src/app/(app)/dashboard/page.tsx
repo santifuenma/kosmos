@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
+import { isDemoUser } from '@/lib/demo'
 import { getStartOfToday, getStartOfTomorrow, getISOWeekNumber, getMondayUTC } from '@/lib/dates'
 import { capitalize, countSessionViolations } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -34,6 +35,8 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
   const db = dbFor(session.user)
+  // El demo es de solo lectura: no se le ofrece abrir ni continuar sesiones.
+  const isDemo = isDemoUser(session.user.email)
 
   const now = new Date()
   const startOfToday = getStartOfToday(now)
@@ -239,10 +242,12 @@ export default async function DashboardPage() {
                 )}
               </div>
               <div className={styles.sessionRight}>
-                <Link href="/session/new" className="ctaBtn ctaBtnPrimary">
-                  <PlayIcon />
-                  Iniciar nueva Sesión
-                </Link>
+                {!isDemo && (
+                  <Link href="/session/new" className="ctaBtn ctaBtnPrimary">
+                    <PlayIcon />
+                    Iniciar nueva Sesión
+                  </Link>
+                )}
               </div>
             </>
           )}
@@ -264,10 +269,12 @@ export default async function DashboardPage() {
                 )}
               </div>
               <div className={styles.sessionRight}>
-                <Link href="/session/new" className="ctaBtn ctaBtnPrimary">
-                  <PlayIcon />
-                  Confirmar y abrir sesión
-                </Link>
+                {!isDemo && (
+                  <Link href="/session/new" className="ctaBtn ctaBtnPrimary">
+                    <PlayIcon />
+                    Confirmar y abrir sesión
+                  </Link>
+                )}
               </div>
             </>
           )}
@@ -293,9 +300,11 @@ export default async function DashboardPage() {
                 )}
               </div>
               <div className={styles.sessionRight}>
-                <Link href="/session/active" className="ctaBtn ctaBtnPrimary">
-                  Ir a la sesión
-                </Link>
+                {!isDemo && (
+                  <Link href="/session/active" className="ctaBtn ctaBtnPrimary">
+                    Ir a la sesión
+                  </Link>
+                )}
               </div>
             </>
           )}

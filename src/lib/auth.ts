@@ -20,6 +20,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { parseGender, type Gender } from '@/lib/gender'
 import { normalizeEmail } from '@/lib/emailAddress'
+import { isDemoUser } from '@/lib/demo'
 import {
   RATE_LIMITS,
   clearRateLimit,
@@ -179,6 +180,9 @@ export const authOptions: NextAuthOptions = {
         session.user.firstName = token.firstName as string
         session.user.lastName = token.lastName as string
         session.user.gender = token.gender as Gender
+        // Para que la interfaz oculte lo que el demo no puede hacer. Es solo
+        // cosmético: la barrera de verdad está en el proxy y en Postgres.
+        session.user.isDemo = isDemoUser(token.email)
       }
       return session
     },

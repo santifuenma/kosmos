@@ -25,6 +25,8 @@ declare module 'next-auth' {
       firstName: string
       lastName: string
       gender: Gender
+      // true si es la cuenta del demo público (solo lectura; ver src/lib/demo.ts)
+      isDemo: boolean
     } & DefaultSession['user'] // Mantenemos los campos originales (name, email, image)
   }
 

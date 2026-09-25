@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
+import { isDemoUser } from '@/lib/demo'
 import Navbar from '@/components/layout/Navbar'
 import LiquidBackground from '@/components/LiquidBackground'
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow'
@@ -54,6 +55,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className={styles.appLayout}>
       <LiquidBackground />
       <Navbar>{children}</Navbar>
+      {isDemoUser(session.user.email) && (
+        <p className={styles.demoBanner} role="status">
+          Estás viendo una demo con datos simulados, modo solo lectura.
+        </p>
+      )}
     </div>
   )
 }

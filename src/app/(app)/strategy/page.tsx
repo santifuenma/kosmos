@@ -14,6 +14,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import type { StrategyWithRelations, StrategyConditionItem, StrategyRuleItem } from '@/types'
 import { capitalize } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -65,6 +66,7 @@ export default function StrategyPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [hasOpenSession, setHasOpenSession] = useState(false)
+  const isDemo = useSession().data?.user?.isDemo ?? false
 
   useEffect(() => {
     fetch('/api/strategy')
@@ -98,7 +100,12 @@ export default function StrategyPage() {
   return strategy === null ? (
     <CreateStrategyForm onCreated={setStrategy} />
   ) : (
-    <ManageStrategyView strategy={strategy} onUpdate={setStrategy} hasOpenSession={hasOpenSession} />
+    <ManageStrategyView
+      strategy={strategy}
+      onUpdate={setStrategy}
+      hasOpenSession={hasOpenSession}
+      isDemo={isDemo}
+    />
   )
 }
 
@@ -267,11 +274,17 @@ function ManageStrategyView({
   strategy,
   onUpdate,
   hasOpenSession,
+  isDemo,
 }: {
   strategy: StrategyWithRelations
   onUpdate: (s: StrategyWithRelations) => void
   hasOpenSession: boolean
+  isDemo: boolean
 }) {
+  // En el demo la estrategia se ve igual que con una sesión abierta: con
+  // interruptores y botón de editar bloqueados. Los botones de añadir, que
+  // con sesión abierta salen deshabilitados, en el demo ni aparecen.
+  const locked = hasOpenSession || isDemo
   const [editing, setEditing] = useState(false)
   const [showAddRule, setShowAddRule] = useState(false)
   const [showAddCondition, setShowAddCondition] = useState(false)
@@ -320,7 +333,7 @@ function ManageStrategyView({
           <StrategyReadMode
             strategy={strategy}
             onEdit={() => setEditing(true)}
-            locked={hasOpenSession}
+            locked={locked}
           />
         )}
       </div>
@@ -343,15 +356,17 @@ function ManageStrategyView({
           <div className={styles.cardDivider} />
 
           <div className={styles.itemList}>
-            <button
-              type="button"
-              onClick={() => setShowAddRule(true)}
-              disabled={hasOpenSession}
-              className={`${styles.itemRow} ${styles.addItemRow}`}
-            >
-              <span className={styles.addItemLabel}>Agregar regla personalizada</span>
-              <span className={styles.addItemIcon}><PlusIcon /></span>
-            </button>
+            {!isDemo && (
+              <button
+                type="button"
+                onClick={() => setShowAddRule(true)}
+                disabled={hasOpenSession}
+                className={`${styles.itemRow} ${styles.addItemRow}`}
+              >
+                <span className={styles.addItemLabel}>Agregar regla personalizada</span>
+                <span className={styles.addItemIcon}><PlusIcon /></span>
+              </button>
+            )}
 
             {perTradeRules.length > 0 && (
               <>
@@ -360,7 +375,7 @@ function ManageStrategyView({
                   <RuleRow
                     key={sr.id}
                     item={sr}
-                    locked={hasOpenSession}
+                    locked={locked}
                     onToggle={(updated) => {
                       onUpdate({
                         ...strategy,
@@ -385,7 +400,7 @@ function ManageStrategyView({
                   <RuleRow
                     key={sr.id}
                     item={sr}
-                    locked={hasOpenSession}
+                    locked={locked}
                     onToggle={(updated) => {
                       onUpdate({
                         ...strategy,
@@ -420,21 +435,23 @@ function ManageStrategyView({
           <div className={styles.cardDivider} />
 
           <div className={styles.itemList}>
-            <button
-              type="button"
-              onClick={() => setShowAddCondition(true)}
-              disabled={hasOpenSession}
-              className={`${styles.itemRow} ${styles.addItemRow}`}
-            >
-              <span className={styles.addItemLabel}>Agregar condición personalizada</span>
-              <span className={styles.addItemIcon}><PlusIcon /></span>
-            </button>
+            {!isDemo && (
+              <button
+                type="button"
+                onClick={() => setShowAddCondition(true)}
+                disabled={hasOpenSession}
+                className={`${styles.itemRow} ${styles.addItemRow}`}
+              >
+                <span className={styles.addItemLabel}>Agregar condición personalizada</span>
+                <span className={styles.addItemIcon}><PlusIcon /></span>
+              </button>
+            )}
 
             {strategy.conditions.filter((sc) => sc.condition.isActive).sort(byActiveFirst).map((sc) => (
               <ConditionRow
                 key={sc.id}
                 item={sc}
-                locked={hasOpenSession}
+                locked={locked}
                 onToggle={(updated) => {
                   onUpdate({
                     ...strategy,

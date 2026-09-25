@@ -57,6 +57,16 @@ export default withAuth(
       )
     }
 
+    // Las páginas para abrir y llevar una sesión solo sirven para escribir.
+    // La interfaz ya no enlaza a ellas en el demo; esto cubre a quien teclea
+    // la dirección a mano.
+    if (
+      isDemoUser(token?.email) &&
+      (pathname.startsWith('/session/new') || pathname.startsWith('/session/active'))
+    ) {
+      return NextResponse.redirect(new URL('/dashboard', req.url))
+    }
+
     return NextResponse.next()
   },
   {

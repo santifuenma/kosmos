@@ -39,3 +39,43 @@
     overflow-x: clip;
   }
 }
+/* Aviso del demo público. Va fijo abajo y centrado sobre la zona de contenido
+   (no sobre la pantalla entera: a la izquierda está el sidebar), así no tapa
+   la cabecera de ninguna página. pointer-events: none para que nunca se coma
+   un clic destinado a lo que tenga debajo. */
+.demoBanner {
+  position: fixed;
+  bottom: 16px;
+  left: calc(50% + 140px);
+  transform: translateX(-50%);
+  z-index: 90;
+  max-width: calc(100vw - 280px - 32px);
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 210, 64, 0.18);
+  border: 1px solid rgba(255, 210, 64, 0.35);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+}
+
+@media (max-width: 1220px) {
+  .demoBanner {
+    left: calc(50% + 55px);
+    max-width: calc(100vw - 110px - 32px);
+  }
+}
+
+@media (max-width: 800px) {
+  .demoBanner {
+    left: 50%;
+    width: calc(100vw - 32px);
+    max-width: none;
+    bottom: 12px;
+  }
+}
