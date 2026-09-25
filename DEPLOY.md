@@ -130,14 +130,22 @@ tablas de Kosmos ni con las migraciones de Prisma.
 que siembra `prisma/seed-testuser.ts`) y lleva al dashboard. Es el destino del
 botón «Ver demo» del portfolio: `https://<tu-dominio>/api/demo-login`.
 
+El visitante puede recorrer el flujo entero de una sesión (plan del día,
+confirmar, registrar operaciones, cerrar y ver el ICO). Nada de eso llega a la
+base de datos: se guarda cifrado en una cookie de su navegador
+([`demoSandbox.ts`](src/lib/demoSandbox.ts)), dura hasta que cierra el
+navegador y se borra cada vez que entra por `/api/demo-login` o pulsa
+«Empezar de cero» en el banner. Las rutas de ese flujo llaman a
+[`demoActions.ts`](src/lib/demoActions.ts) cuando la sesión es la del demo.
+
 ### Qué impide que el demo escriba
 
 | Capa | Dónde | Qué hace |
 | --- | --- | --- |
 | Postgres | Rol `kosmos_demo` (migración `demo_read_only_role`) | Solo tiene `SELECT`, sus policies RLS solo le enseñan las filas del demo y sus transacciones son de solo lectura. No puede leer `password` ni las tablas de tokens o límites. |
 | Aplicación | `dbFor()` en `src/lib/prisma.ts` | Toda consulta hecha en nombre del demo va por la conexión `DEMO_DATABASE_URL`, es decir, con ese rol. Si falta la variable, falla en vez de usar la conexión completa. |
-| Proxy | `src/proxy.ts` | Responde 403 a cualquier `POST`/`PUT`/`PATCH`/`DELETE` del demo contra la API, y lo aparta de `/session/new` y `/session/active`. |
-| Interfaz | Layout, dashboard, estrategia, navbar | Banner de solo lectura y botones de crear/editar ocultos o desactivados. Solo cosmético. |
+| Proxy | `src/proxy.ts` | Responde 403 a cualquier `POST`/`PUT`/`PATCH`/`DELETE` del demo contra la API, salvo los cuatro `POST` del flujo de sesión, que se simulan en la cookie. |
+| Interfaz | Layout y estrategia | Banner que avisa de que nada se guarda; la estrategia queda bloqueada. Solo cosmético. |
 
 La API REST de Supabase (la que se usa con la clave `anon`) queda cerrada aparte:
 la misma migración retira a `anon` y `authenticated` todos los permisos sobre
