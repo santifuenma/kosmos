@@ -26,7 +26,7 @@ import { getStartOfToday } from '@/lib/dates'
 
 // Cambiar este número obliga a regenerar el demo aunque ya estuviera al día:
 // forma parte de los ids, y la comprobación de "está al día" compara ids.
-export const DEMO_DATASET_VERSION = 1
+export const DEMO_DATASET_VERSION = 2
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Estrategia de ejemplo
@@ -181,16 +181,16 @@ type Tier = 'good' | 'mixed' | 'bad'
 // Cómo de disciplinado es cada mes: [prob. día bueno, prob. día regular].
 // El resto son días malos.
 const MONTH_PROFILE: Record<0 | 1 | 2, [number, number]> = {
-  2: [0.2, 0.35],
-  1: [0.45, 0.4],
-  0: [0.72, 0.23],
+  2: [0.2, 0.3],
+  1: [0.3, 0.38],
+  0: [0.4, 0.42],
 }
 
 // Distribución de infracciones por operación: [cuántas, peso].
 const VIOLATIONS_PER_TRADE: Record<Tier, [number, number][]> = {
-  good: [[0, 85], [1, 15]],
-  mixed: [[0, 20], [1, 30], [2, 30], [3, 20]],
-  bad: [[1, 5], [2, 15], [3, 25], [4, 30], [5, 25]],
+  good: [[0, 55], [1, 30], [2, 15]],
+  mixed: [[1, 15], [2, 40], [3, 45]],
+  bad: [[2, 10], [3, 25], [4, 35], [5, 30]],
 }
 
 function weightedPick(rng: Rng, options: [number, number][]): number {
