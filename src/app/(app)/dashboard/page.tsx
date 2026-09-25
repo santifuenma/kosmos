@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
-import { isDemoUser } from '@/lib/demo'
+import { loadDemoSandbox } from '@/lib/demoSandbox'
 import { getStartOfToday, getStartOfTomorrow, getISOWeekNumber, getMondayUTC } from '@/lib/dates'
 import { capitalize, countSessionViolations } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -35,8 +35,6 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
   const db = dbFor(session.user)
-  // El demo es de solo lectura: no se le ofrece abrir ni continuar sesiones.
-  const isDemo = isDemoUser(session.user.email)
 
   const now = new Date()
   const startOfToday = getStartOfToday(now)
@@ -45,7 +43,7 @@ export default async function DashboardPage() {
   const startOfNextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
 
   // ── Parallel data fetch ──────────────────────────────────────────────────
-  const [strategy, todayIntention, lastClosedSession, monthSessions] = await Promise.all([
+  const [strategy, dbTodayIntention, lastClosedSession, dbMonthSessions, demo] = await Promise.all([
     db.strategy.findUnique({
       where: { userId: session.user.id },
       select: {
@@ -102,7 +100,18 @@ export default async function DashboardPage() {
       },
       orderBy: { date: 'asc' },
     }),
+    loadDemoSandbox(session.user, db),
   ])
+
+  // Demo público: lo de hoy sale de la cookie del visitante, no de la base de
+  // datos (ver src/lib/demoSandbox.ts). Tiene la misma forma que lo de Prisma.
+  const todayIntention = demo
+    ? ({ ...demo.intention, session: demo.session } as unknown as typeof dbTodayIntention)
+    : dbTodayIntention
+  const monthSessions =
+    demo?.session?.status === 'CLOSED'
+      ? [...dbMonthSessions, demo.session as unknown as (typeof dbMonthSessions)[number]]
+      : dbMonthSessions
 
   // Solo el nombre de pila: el saludo es informal y el apellido sobra.
   // El email es el respaldo si por lo que sea la sesión no trae nombre.
@@ -242,12 +251,10 @@ export default async function DashboardPage() {
                 )}
               </div>
               <div className={styles.sessionRight}>
-                {!isDemo && (
-                  <Link href="/session/new" className="ctaBtn ctaBtnPrimary">
-                    <PlayIcon />
-                    Iniciar nueva Sesión
-                  </Link>
-                )}
+                <Link href="/session/new" className="ctaBtn ctaBtnPrimary">
+                  <PlayIcon />
+                  Iniciar nueva Sesión
+                </Link>
               </div>
             </>
           )}
@@ -269,12 +276,10 @@ export default async function DashboardPage() {
                 )}
               </div>
               <div className={styles.sessionRight}>
-                {!isDemo && (
-                  <Link href="/session/new" className="ctaBtn ctaBtnPrimary">
-                    <PlayIcon />
-                    Confirmar y abrir sesión
-                  </Link>
-                )}
+                <Link href="/session/new" className="ctaBtn ctaBtnPrimary">
+                  <PlayIcon />
+                  Confirmar y abrir sesión
+                </Link>
               </div>
             </>
           )}
@@ -300,11 +305,9 @@ export default async function DashboardPage() {
                 )}
               </div>
               <div className={styles.sessionRight}>
-                {!isDemo && (
-                  <Link href="/session/active" className="ctaBtn ctaBtnPrimary">
-                    Ir a la sesión
-                  </Link>
-                )}
+                <Link href="/session/active" className="ctaBtn ctaBtnPrimary">
+                  Ir a la sesión
+                </Link>
               </div>
             </>
           )}

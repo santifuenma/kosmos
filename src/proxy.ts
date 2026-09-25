@@ -24,6 +24,16 @@ import { isDemoUser } from '@/lib/demo'
 // Métodos HTTP que por definición no cambian nada.
 const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
+// Escrituras que el demo sí puede hacer: las del flujo de una sesión de
+// trading. Esas rutas, para la cuenta demo, no tocan la base de datos:
+// guardan en una cookie del navegador (src/lib/demoActions.ts).
+const DEMO_SIMULATED_WRITES = new Set([
+  '/api/intention',
+  '/api/intention/confirm',
+  '/api/session/trade',
+  '/api/session/close',
+])
+
 export default withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl
@@ -37,9 +47,10 @@ export default withAuth(
     }
 
     // ── Demo público: solo lectura ─────────────────────────────────────────
-    // Cualquier petición a la API que no sea de lectura se corta aquí. No es
-    // la única barrera: las rutas consultan en nombre del demo con el rol
-    // kosmos_demo, que en Postgres no tiene permiso para escribir. Esto
+    // Cualquier petición a la API que no sea de lectura se corta aquí, salvo
+    // las del flujo de sesión, que en el demo se simulan sin base de datos.
+    // No es la única barrera: las rutas consultan en nombre del demo con el
+    // rol kosmos_demo, que en Postgres no tiene permiso para escribir. Esto
     // sirve para que la respuesta sea un 403 claro en vez de un error de
     // base de datos, y para que la petición no llegue ni a ejecutarse.
     //
@@ -49,22 +60,13 @@ export default withAuth(
       isDemoUser(token?.email) &&
       pathname.startsWith('/api/') &&
       !pathname.startsWith('/api/auth/') &&
-      !READ_METHODS.has(req.method)
+      !READ_METHODS.has(req.method) &&
+      !(req.method === 'POST' && DEMO_SIMULATED_WRITES.has(pathname))
     ) {
       return NextResponse.json(
         { error: 'El demo es de solo lectura' },
         { status: 403 },
       )
-    }
-
-    // Las páginas para abrir y llevar una sesión solo sirven para escribir.
-    // La interfaz ya no enlaza a ellas en el demo; esto cubre a quien teclea
-    // la dirección a mano.
-    if (
-      isDemoUser(token?.email) &&
-      (pathname.startsWith('/session/new') || pathname.startsWith('/session/active'))
-    ) {
-      return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
     return NextResponse.next()

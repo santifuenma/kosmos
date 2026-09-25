@@ -57,7 +57,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Navbar>{children}</Navbar>
       {isDemoUser(session.user.email) && (
         <p className={styles.demoBanner} role="status">
-          Estás viendo una demo con datos simulados, modo solo lectura.
+          Estás viendo una demo con datos simulados. Puedes crear una sesión:
+          no se guarda en ningún sitio.{' '}
+          {/* Enlace normal (no <Link>): tiene que ir al servidor para borrar la cookie. */}
+          <a href="/api/demo-login" className={styles.demoBannerReset}>Empezar de cero</a>
         </p>
       )}
     </div>

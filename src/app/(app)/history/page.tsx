@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
+import { loadDemoSandbox } from '@/lib/demoSandbox'
 import { capitalize, countSessionViolations } from '@/lib/utils'
 import { emotionalStateLabel } from '@/lib/gender'
 import type { EmotionalState } from '@/types'
@@ -39,7 +40,7 @@ export default async function HistoryPage({ searchParams }: Props) {
   // vez de encadenarlas con awaits secuenciales. Con la base de datos en un
   // pooler remoto, cada round-trip añade latencia de red; en paralelo el
   // tiempo total es el de la consulta más lenta, no la suma de las cuatro.
-  const [allSessionDates, monthSessions, prevMonthSessions, prevTwoMonthsSessions] = await Promise.all([
+  const [dbSessionDates, dbMonthSessions, prevMonthSessions, prevTwoMonthsSessions, demo] = await Promise.all([
     // Available months (for the dropdown)
     db.session.findMany({
       where: { userId: session.user.id, status: 'CLOSED' },
@@ -111,7 +112,18 @@ export default async function HistoryPage({ searchParams }: Props) {
         },
       },
     }),
+    loadDemoSandbox(session.user, db),
   ])
+
+  // Demo público: si el visitante cerró su sesión simulada hoy, aparece en el
+  // historial como una más (ver src/lib/demoSandbox.ts). Los meses anteriores
+  // nunca la incluyen, porque es de hoy.
+  const demoClosed = demo?.session?.status === 'CLOSED' ? demo.session : null
+  const allSessionDates = demoClosed ? [...dbSessionDates, { date: demoClosed.date }] : dbSessionDates
+  const monthSessions =
+    demoClosed && demoClosed.date >= startOfMonth && demoClosed.date < startOfNextMonth
+      ? [...dbMonthSessions, demoClosed as unknown as (typeof dbMonthSessions)[number]]
+      : dbMonthSessions
 
   const seenMonths = new Set<string>()
   const availableMonths: { year: number; month: number; label: string }[] = []

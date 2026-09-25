@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut, useSession } from 'next-auth/react'
+import { signOut } from 'next-auth/react'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { TodayIntention } from '@/types'
 import styles from './Navbar.module.css'
@@ -97,7 +97,6 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [todayIntention, setTodayIntention] = useState<TodayIntention | null | undefined>(undefined)
-  const isDemo = useSession().data?.user?.isDemo ?? false
 
   // Close sidebar whenever the route changes (user tapped a link). Se hace
   // durante el render comparando con la ruta anterior (patrón de React para
@@ -147,9 +146,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
   const navLinks = [
     { href: '/dashboard',  label: 'Dashboard',  icon: <HomeIcon /> },
     { href: '/strategy',   label: 'Estrategia', icon: <TargetIcon /> },
-    // En el demo no se puede abrir ni continuar una sesión; solo ver el
-    // resumen si hubiera una cerrada hoy.
-    { href: sessionHref,   label: 'Sesión',      icon: <CandlesIcon />, isSession: true, disabled: isDemo && !hasClosedSession },
+    { href: sessionHref,   label: 'Sesión',      icon: <CandlesIcon />, isSession: true },
     { href: '/history',    label: 'Historial',   icon: <CalendarIcon /> },
     { href: '/profile',    label: 'Perfil',      icon: <UserIcon />, disabled: true },
   ]

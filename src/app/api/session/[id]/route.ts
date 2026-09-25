@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
+import { loadDemoSandbox } from '@/lib/demoSandbox'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/session/[id]
@@ -25,7 +26,11 @@ export async function GET(
 
   const { id } = await params
 
-  const sessionData = await db.session.findUnique({
+  // En el demo, la sesión de hoy no está en la base de datos sino en la cookie.
+  const demo = await loadDemoSandbox(session.user, db)
+  const demoSession = demo?.session?.id === id ? demo.session : null
+
+  const dbSession = demoSession ? null : await db.session.findUnique({
     where: { id },
     include: {
       trades: {
@@ -57,6 +62,11 @@ export async function GET(
       },
     },
   })
+
+  // La sesión simulada tiene la misma forma que la de Prisma (ver hydrateSandbox).
+  const sessionData = demoSession
+    ? (demoSession as unknown as NonNullable<typeof dbSession>)
+    : dbSession
 
   if (!sessionData) {
     return NextResponse.json({ error: 'Sesión no encontrada' }, { status: 404 })

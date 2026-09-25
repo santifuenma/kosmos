@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
+import { isDemoUser } from '@/lib/demo'
+import { getIntention, createIntention } from '@/lib/demoActions'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,6 +51,13 @@ export async function GET() {
   }
   const db = dbFor(session.user)
 
+  // Demo público: el flujo funciona igual, pero se guarda en una cookie del
+  // navegador y no en la base de datos (ver src/lib/demoActions.ts).
+  if (isDemoUser(session.user.email)) {
+    const demoCtx = { db, userId: session.user.id }
+    return getIntention(demoCtx)
+  }
+
   // Buscamos la intención cuya fecha caiga dentro del día de hoy (UTC).
   // Usamos un rango [hoy, mañana) en lugar de igualdad exacta para absorber
   // posibles diferencias de milisegundos si en el futuro se cambia la normalización.
@@ -91,6 +100,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
   const db = dbFor(session.user)
+
+  // Demo público: el flujo funciona igual, pero se guarda en una cookie del
+  // navegador y no en la base de datos (ver src/lib/demoActions.ts).
+  if (isDemoUser(session.user.email)) {
+    const demoCtx = { db, userId: session.user.id }
+    return createIntention(request, demoCtx)
+  }
 
   // Verificamos que el usuario tiene estrategia configurada.
   // Sin estrategia no hay límites que copiar ni catálogo de condiciones/reglas.

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
+import { isDemoUser } from '@/lib/demo'
+import { registerTrade } from '@/lib/demoActions'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -29,6 +31,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
   const db = dbFor(session.user)
+
+  // Demo público: el flujo funciona igual, pero se guarda en una cookie del
+  // navegador y no en la base de datos (ver src/lib/demoActions.ts).
+  if (isDemoUser(session.user.email)) {
+    const demoCtx = { db, userId: session.user.id }
+    return registerTrade(request, demoCtx)
+  }
 
   // Verificamos que existe sesión abierta hoy. No registramos operaciones
   // fuera de una sesión activa para mantener la integridad del historial.

@@ -79,3 +79,12 @@
     bottom: 12px;
   }
 }
+
+/* El banner deja pasar los clics (pointer-events: none); el enlace no. */
+.demoBanner .demoBannerReset {
+  pointer-events: auto;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

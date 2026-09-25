@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
+import { loadDemoSandbox } from '@/lib/demoSandbox'
 import { capitalize } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { IcoCard } from '@/components/cards/IcoCard'
@@ -22,7 +23,11 @@ export default async function SessionDetailPage({
   if (!authSession?.user?.id) redirect('/login')
   const db = dbFor(authSession.user)
 
-  const sessionData = await db.session.findUnique({
+  // En el demo, la sesión de hoy no está en la base de datos sino en la cookie.
+  const demo = await loadDemoSandbox(authSession.user, db)
+  const demoSession = demo?.session?.id === id ? demo.session : null
+
+  const dbSession = demoSession ? null : await db.session.findUnique({
     where: { id },
     include: {
       trades: {
@@ -54,6 +59,11 @@ export default async function SessionDetailPage({
       },
     },
   })
+
+  // La sesión simulada tiene la misma forma que la de Prisma (ver hydrateSandbox).
+  const sessionData = demoSession
+    ? (demoSession as unknown as NonNullable<typeof dbSession>)
+    : dbSession
 
   if (!sessionData) notFound()
 

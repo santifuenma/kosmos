@@ -3,6 +3,7 @@ import { encode } from 'next-auth/jwt'
 import { authOptions } from '@/lib/auth'
 import { dbFor, isDemoDatabaseConfigured } from '@/lib/prisma'
 import { DEMO_USER_EMAIL } from '@/lib/demo'
+import { DEMO_SANDBOX_COOKIE } from '@/lib/demoSandbox'
 import { parseGender } from '@/lib/gender'
 import { RATE_LIMITS, consumeRateLimit, getClientIp } from '@/lib/rateLimit'
 
@@ -106,6 +107,9 @@ export async function GET(request: NextRequest) {
     secure,
     maxAge,
   })
+  // Cada entrada empieza de cero: se tira la sesión simulada que quedara de
+  // una visita anterior (ver src/lib/demoSandbox.ts).
+  response.cookies.delete(DEMO_SANDBOX_COOKIE)
   return response
 }
 
