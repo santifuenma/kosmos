@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { capitalize } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { IcoCard } from '@/components/cards/IcoCard'
@@ -20,8 +20,9 @@ export default async function SessionDetailPage({
   const { id } = await params
   const authSession = await getServerSession(authOptions)
   if (!authSession?.user?.id) redirect('/login')
+  const db = dbFor(authSession.user)
 
-  const sessionData = await prisma.session.findUnique({
+  const sessionData = await db.session.findUnique({
     where: { id },
     include: {
       trades: {
@@ -66,7 +67,7 @@ export default async function SessionDetailPage({
 
   if (sessionData.status === 'OPEN') redirect('/session/active')
 
-  const strategy = await prisma.strategy.findUnique({
+  const strategy = await db.strategy.findUnique({
     where: { id: sessionData.intention.strategyId },
     include: {
       conditions: {

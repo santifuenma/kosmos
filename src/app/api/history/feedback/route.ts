@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { getMondayUTC } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,6 +24,7 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   const currentMonday = getMondayUTC(new Date())
 
@@ -32,7 +33,7 @@ export async function GET() {
   const twoWeeksAgo = new Date(currentMonday)
   twoWeeksAgo.setUTCDate(twoWeeksAgo.getUTCDate() - 7)
 
-  const recentSessions = await prisma.session.findMany({
+  const recentSessions = await db.session.findMany({
     where: {
       userId: session.user.id,
       status: 'CLOSED',

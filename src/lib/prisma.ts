@@ -15,6 +15,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { isDemoUser } from '@/lib/demo'
 
 // Tipamos globalThis para poder almacenar la instancia sin que TypeScript
 // se queje de que la propiedad `prisma` no existe en el tipo global.
@@ -37,3 +38,45 @@ export const prisma = globalForPrisma.prisma ?? createPrismaClient()
 // Solo guardamos en globalThis en desarrollo. En producción es innecesario
 // porque el proceso no se reinicia con hot-reload.
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Conexión de solo lectura para el demo público.
+//
+// `prisma` entra como el usuario postgres, que puede leer y escribir todo. Las
+// sesiones del demo usan otra conexión, con el rol kosmos_demo (migración
+// 20260925120000_demo_read_only_role): solo tiene permiso de SELECT y solo ve
+// las filas del usuario demo. Si una ruta intentara escribir en nombre del
+// demo, sería Postgres quien la frenara, no nuestro código.
+//
+// Se crea la primera vez que hace falta: quien nunca entra al demo no abre
+// esa conexión.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const globalForDemoPrisma = globalThis as unknown as {
+  demoPrisma: PrismaClient | undefined
+}
+
+export function isDemoDatabaseConfigured(): boolean {
+  return Boolean(process.env.DEMO_DATABASE_URL)
+}
+
+function getDemoPrisma(): PrismaClient {
+  if (globalForDemoPrisma.demoPrisma) return globalForDemoPrisma.demoPrisma
+
+  // Sin la variable no hay plan B: caer en `prisma` le daría al demo permiso
+  // para escribir. Preferimos que falle.
+  const connectionString = process.env.DEMO_DATABASE_URL
+  if (!connectionString) {
+    throw new Error('DEMO_DATABASE_URL no está configurada')
+  }
+
+  const client = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
+  globalForDemoPrisma.demoPrisma = client
+  return client
+}
+
+// Cliente con el que consultar en nombre de un usuario. Todas las páginas y
+// rutas que trabajan con datos del usuario con sesión pasan por aquí.
+export function dbFor(user: { email?: string | null }): PrismaClient {
+  return isDemoUser(user.email) ? getDemoPrisma() : prisma
+}

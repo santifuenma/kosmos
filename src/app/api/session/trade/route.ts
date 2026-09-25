@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,10 +28,11 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   // Verificamos que existe sesión abierta hoy. No registramos operaciones
   // fuera de una sesión activa para mantener la integridad del historial.
-  const todaySession = await prisma.session.findFirst({
+  const todaySession = await db.session.findFirst({
     where: {
       userId: session.user.id,
       status: 'OPEN',
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
 
   // Obtenemos la estrategia con sus condiciones y reglas activas para validar
   // que las violaciones enviadas pertenecen a la estrategia del usuario.
-  const strategy = await prisma.strategy.findUnique({
+  const strategy = await db.strategy.findUnique({
     where: { userId: session.user.id },
     include: {
       conditions: {
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
   // violaciones se crean juntos. Si alguna violación falla, no se crea el trade.
 
   try {
-    const trade = await prisma.trade.create({
+    const trade = await db.trade.create({
       data: {
         sessionId: todaySession.id,
         direction,

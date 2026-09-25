@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import Navbar from '@/components/layout/Navbar'
 import LiquidBackground from '@/components/LiquidBackground'
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow'
@@ -31,9 +31,10 @@ import styles from './layout.module.css'
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
+  const db = dbFor(session.user)
 
   // select mínimo: solo interesa si existe, no sus datos.
-  const strategy = await prisma.strategy.findUnique({
+  const strategy = await db.strategy.findUnique({
     where: { userId: session.user.id },
     select: { id: true },
   })

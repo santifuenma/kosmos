@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/strategy/conditions/[id]
@@ -17,6 +17,7 @@ export async function PATCH(
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   // En Next.js 15+ los params de rutas dinámicas son una Promise
   const { id } = await params
@@ -24,7 +25,7 @@ export async function PATCH(
   // Obtenemos el StrategyCondition junto a su Strategy para verificar la autoría.
   // Sin esta comprobación, cualquier usuario autenticado podría modificar la
   // estrategia de otro simplemente conociendo el id del StrategyCondition.
-  const strategyCondition = await prisma.strategyCondition.findUnique({
+  const strategyCondition = await db.strategyCondition.findUnique({
     where: { id },
     include: { strategy: true },
   })
@@ -39,7 +40,7 @@ export async function PATCH(
 
   // Toggle: invertimos el valor actual. El cliente aplica el mismo cambio
   // de forma optimista antes de que llegue esta respuesta.
-  const updated = await prisma.strategyCondition.update({
+  const updated = await db.strategyCondition.update({
     where: { id },
     data: { isActive: !strategyCondition.isActive },
     include: { condition: true },
@@ -69,10 +70,11 @@ export async function DELETE(
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   const { id } = await params
 
-  const strategyCondition = await prisma.strategyCondition.findUnique({
+  const strategyCondition = await db.strategyCondition.findUnique({
     where: { id },
     include: { strategy: true, condition: true },
   })
@@ -91,11 +93,11 @@ export async function DELETE(
     )
   }
 
-  const violationCount = await prisma.tradeViolation.count({
+  const violationCount = await db.tradeViolation.count({
     where: { conditionId: strategyCondition.conditionId },
   })
 
-  await prisma.$transaction(async (tx) => {
+  await db.$transaction(async (tx) => {
     await tx.strategyCondition.delete({ where: { id } })
 
     // Sin violaciones históricas que la referencien: se puede borrar del todo.

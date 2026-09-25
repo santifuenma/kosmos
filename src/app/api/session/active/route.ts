@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,8 +21,9 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
-  const todaySession = await prisma.session.findFirst({
+  const todaySession = await db.session.findFirst({
     where: {
       userId: session.user.id,
       status: 'OPEN',
@@ -72,7 +73,7 @@ export async function GET() {
   }
 
   // Última sesión cerrada (para mostrar "Última sesión: Ayer, 24 de mayo…")
-  const previousSession = await prisma.session.findFirst({
+  const previousSession = await db.session.findFirst({
     where: {
       userId: session.user.id,
       status: 'CLOSED',

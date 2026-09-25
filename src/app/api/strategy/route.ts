@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Parámetros de include reutilizados en las tres operaciones.
@@ -46,10 +46,11 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   // Buscamos la estrategia del usuario autenticado.
   // En el MVP cada usuario tiene como máximo una estrategia (@unique userId).
-  const strategy = await prisma.strategy.findUnique({
+  const strategy = await db.strategy.findUnique({
     where: { userId: session.user.id },
     include: strategyInclude,
   })
@@ -84,11 +85,12 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   // Verificamos antes del insert para devolver un error claro.
   // Aunque @unique en userId lo impediría igualmente, el mensaje de Prisma
   // sería genérico y confundente para el cliente.
-  const existing = await prisma.strategy.findUnique({
+  const existing = await db.strategy.findUnique({
     where: { userId: session.user.id },
   })
   if (existing) {
@@ -162,8 +164,8 @@ export async function POST(request: NextRequest) {
   // las estrategias nuevas ya no se vinculan a ellos, aunque los IDs sigan
   // existiendo para las violaciones históricas que ya los referencian.
   const [allConditions, allRules] = await Promise.all([
-    prisma.entryCondition.findMany({ where: { isCustom: false, isActive: true } }),
-    prisma.behavioralRule.findMany({ where: { isCustom: false, isActive: true } }),
+    db.entryCondition.findMany({ where: { isCustom: false, isActive: true } }),
+    db.behavioralRule.findMany({ where: { isCustom: false, isActive: true } }),
   ])
 
   // Sets para resolver isActive en O(1) al mapear el catálogo. Los ids que
@@ -171,7 +173,7 @@ export async function POST(request: NextRequest) {
   const activeConditions = new Set<string>(activeConditionIds ?? [])
   const activeRules = new Set<string>(activeRuleIds ?? [])
 
-  const strategy = await prisma.strategy.create({
+  const strategy = await db.strategy.create({
     data: {
       userId: session.user.id,
       name: name.trim(),
@@ -217,6 +219,7 @@ export async function PUT(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   const body = await request.json()
   const { name, description, maxTrades, tradingHoursStart, tradingHoursEnd } = body
@@ -277,7 +280,7 @@ export async function PUT(request: NextRequest) {
 
   // updateMany con userId en el where nos evita una query de lookup previa.
   // Si el usuario no tiene estrategia, count es 0 y respondemos 404.
-  const result = await prisma.strategy.updateMany({
+  const result = await db.strategy.updateMany({
     where: { userId: session.user.id },
     data,
   })
@@ -289,7 +292,7 @@ export async function PUT(request: NextRequest) {
     )
   }
 
-  const updated = await prisma.strategy.findUnique({
+  const updated = await db.strategy.findUnique({
     where: { userId: session.user.id },
     include: strategyInclude,
   })

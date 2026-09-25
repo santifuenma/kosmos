@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 import { computeIco } from '@/lib/ico'
 
@@ -33,10 +33,11 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   // Obtenemos la sesión con todos sus trades y violaciones para el cálculo del ICO.
   // Incluir trades aquí nos evita una segunda query durante el cálculo.
-  const todaySession = await prisma.session.findFirst({
+  const todaySession = await db.session.findFirst({
     where: {
       userId: session.user.id,
       status: 'OPEN',
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
   // Obtenemos la estrategia con sus condiciones y reglas ACTIVAS para:
   //   a) Validar que las violaciones de sesión enviadas son correctas
   //   b) Contar C_activas, R_trade y R_session para el denominador del ICO
-  const strategy = await prisma.strategy.findUnique({
+  const strategy = await db.strategy.findUnique({
     where: { userId: session.user.id },
     include: {
       conditions: {
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
   // de sesión y la actualización del estado sean atómicas: o todo ocurre
   // o nada, evitando sesiones "medio cerradas" con ICO inconsistente.
 
-  const closedSession = await prisma.$transaction(async (tx) => {
+  const closedSession = await db.$transaction(async (tx) => {
     // Creamos las violaciones de sesión mapeando StrategyRule.id → BehavioralRule.id.
     // El mismo patrón que en el trade endpoint: almacenamos el ID del catálogo,
     // no del vínculo intermedio.

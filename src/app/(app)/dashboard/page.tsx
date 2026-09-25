@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow, getISOWeekNumber, getMondayUTC } from '@/lib/dates'
 import { capitalize, countSessionViolations } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -33,6 +33,7 @@ function formatRelativeDate(dateStr: string | Date): string {
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
+  const db = dbFor(session.user)
 
   const now = new Date()
   const startOfToday = getStartOfToday(now)
@@ -42,7 +43,7 @@ export default async function DashboardPage() {
 
   // ── Parallel data fetch ──────────────────────────────────────────────────
   const [strategy, todayIntention, lastClosedSession, monthSessions] = await Promise.all([
-    prisma.strategy.findUnique({
+    db.strategy.findUnique({
       where: { userId: session.user.id },
       select: {
         id: true,
@@ -54,7 +55,7 @@ export default async function DashboardPage() {
         rules: { where: { isActive: true }, select: { id: true } },
       },
     }),
-    prisma.dailyIntention.findFirst({
+    db.dailyIntention.findFirst({
       where: {
         userId: session.user.id,
         date: { gte: startOfToday, lt: startOfTomorrow },
@@ -74,7 +75,7 @@ export default async function DashboardPage() {
         },
       },
     }),
-    prisma.session.findFirst({
+    db.session.findFirst({
       where: {
         userId: session.user.id,
         status: 'CLOSED',
@@ -83,7 +84,7 @@ export default async function DashboardPage() {
       orderBy: { date: 'desc' },
       select: { id: true, date: true, icoScore: true, violations: { select: { id: true } }, trades: { select: { violations: { select: { id: true } } } } },
     }),
-    prisma.session.findMany({
+    db.session.findMany({
       where: {
         userId: session.user.id,
         status: 'CLOSED',

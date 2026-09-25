@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/strategy/conditions
@@ -17,8 +17,9 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
-  const strategy = await prisma.strategy.findUnique({
+  const strategy = await db.strategy.findUnique({
     where: { userId: session.user.id },
   })
   if (!strategy) {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   // Creamos la condición y su vínculo con la estrategia en una transacción:
   // si el vínculo fallara, no queremos dejar una condición huérfana.
-  const strategyCondition = await prisma.$transaction(async (tx) => {
+  const strategyCondition = await db.$transaction(async (tx) => {
     const condition = await tx.entryCondition.create({
       data: {
         code,

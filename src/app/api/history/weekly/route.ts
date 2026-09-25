@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { getISOWeekNumber, getMondayUTC } from '@/lib/dates'
 import { computeWeeklyIco } from '@/lib/ico'
 
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   const { searchParams } = new URL(request.url)
   const weeks = Math.min(52, Math.max(1, parseInt(searchParams.get('weeks') ?? '8', 10) || 8))
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
   const rangeStart = new Date(currentMonday)
   rangeStart.setUTCDate(rangeStart.getUTCDate() - (weeks - 1) * 7)
 
-  const allSessions = await prisma.session.findMany({
+  const allSessions = await db.session.findMany({
     where: {
       userId: session.user.id,
       status: 'CLOSED',

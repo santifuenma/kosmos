@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/strategy/rules/[id]
@@ -17,13 +17,14 @@ export async function PATCH(
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   // En Next.js 15+ los params de rutas dinámicas son una Promise
   const { id } = await params
 
   // Verificamos que el StrategyRule pertenece a la estrategia del usuario.
   // Un usuario no puede activar/desactivar reglas de la estrategia de otro.
-  const strategyRule = await prisma.strategyRule.findUnique({
+  const strategyRule = await db.strategyRule.findUnique({
     where: { id },
     include: { strategy: true },
   })
@@ -33,7 +34,7 @@ export async function PATCH(
   }
 
   // Toggle: invertimos el valor actual de isActive
-  const updated = await prisma.strategyRule.update({
+  const updated = await db.strategyRule.update({
     where: { id },
     data: { isActive: !strategyRule.isActive },
     include: { rule: true },
@@ -63,10 +64,11 @@ export async function DELETE(
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   const { id } = await params
 
-  const strategyRule = await prisma.strategyRule.findUnique({
+  const strategyRule = await db.strategyRule.findUnique({
     where: { id },
     include: { strategy: true, rule: true },
   })
@@ -83,11 +85,11 @@ export async function DELETE(
   }
 
   const [tradeViolationCount, sessionViolationCount] = await Promise.all([
-    prisma.tradeViolation.count({ where: { ruleId: strategyRule.ruleId } }),
-    prisma.sessionViolation.count({ where: { ruleId: strategyRule.ruleId } }),
+    db.tradeViolation.count({ where: { ruleId: strategyRule.ruleId } }),
+    db.sessionViolation.count({ where: { ruleId: strategyRule.ruleId } }),
   ])
 
-  await prisma.$transaction(async (tx) => {
+  await db.$transaction(async (tx) => {
     await tx.strategyRule.delete({ where: { id } })
 
     // Sin violaciones históricas que la referencien: se puede borrar del todo.

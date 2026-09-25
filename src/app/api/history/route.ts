@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/history
@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   const { searchParams } = new URL(request.url)
   const page  = Math.max(1, parseInt(searchParams.get('page')  ?? '1',  10) || 1)
@@ -26,10 +27,10 @@ export async function GET(request: NextRequest) {
 
   // Ejecutamos count y datos en paralelo para evitar dos round-trips secuenciales.
   const [total, sessions] = await Promise.all([
-    prisma.session.count({
+    db.session.count({
       where: { userId: session.user.id, status: 'CLOSED' },
     }),
-    prisma.session.findMany({
+    db.session.findMany({
       where: { userId: session.user.id, status: 'CLOSED' },
       orderBy: { date: 'desc' },
       skip,

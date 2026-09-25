@@ -19,6 +19,10 @@
 
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
+import { isDemoUser } from '@/lib/demo'
+
+// Métodos HTTP que por definición no cambian nada.
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
 export default withAuth(
   function middleware(req) {
@@ -30,6 +34,27 @@ export default withAuth(
     // accesible una vez dentro de la aplicación.
     if (token && (pathname === '/login' || pathname === '/register')) {
       return NextResponse.redirect(new URL('/dashboard', req.url))
+    }
+
+    // ── Demo público: solo lectura ─────────────────────────────────────────
+    // Cualquier petición a la API que no sea de lectura se corta aquí. No es
+    // la única barrera: las rutas consultan en nombre del demo con el rol
+    // kosmos_demo, que en Postgres no tiene permiso para escribir. Esto
+    // sirve para que la respuesta sea un 403 claro en vez de un error de
+    // base de datos, y para que la petición no llegue ni a ejecutarse.
+    //
+    // /api/auth queda fuera porque es donde se cierra la sesión, y ninguna de
+    // sus rutas toca los datos del demo.
+    if (
+      isDemoUser(token?.email) &&
+      pathname.startsWith('/api/') &&
+      !pathname.startsWith('/api/auth/') &&
+      !READ_METHODS.has(req.method)
+    ) {
+      return NextResponse.json(
+        { error: 'El demo es de solo lectura' },
+        { status: 403 },
+      )
     }
 
     return NextResponse.next()

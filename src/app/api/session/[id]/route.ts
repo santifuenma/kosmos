@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/session/[id]
@@ -21,10 +21,11 @@ export async function GET(
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   const { id } = await params
 
-  const sessionData = await prisma.session.findUnique({
+  const sessionData = await db.session.findUnique({
     where: { id },
     include: {
       trades: {
@@ -68,7 +69,7 @@ export async function GET(
 
   // Obtenemos la estrategia con condiciones y reglas activas para el desglose
   // de cumplimiento en la página de resultados.
-  const strategy = await prisma.strategy.findUnique({
+  const strategy = await db.strategy.findUnique({
     where: { id: sessionData.intention.strategyId },
     include: {
       conditions: {

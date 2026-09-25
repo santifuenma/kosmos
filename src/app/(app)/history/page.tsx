@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { redirect } from 'next/navigation'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { capitalize, countSessionViolations } from '@/lib/utils'
 import { emotionalStateLabel } from '@/lib/gender'
 import type { EmotionalState } from '@/types'
@@ -21,6 +21,7 @@ type Props = {
 export default async function HistoryPage({ searchParams }: Props) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login')
+  const db = dbFor(session.user)
 
   const params = await searchParams
   const now = new Date()
@@ -40,12 +41,12 @@ export default async function HistoryPage({ searchParams }: Props) {
   // tiempo total es el de la consulta más lenta, no la suma de las cuatro.
   const [allSessionDates, monthSessions, prevMonthSessions, prevTwoMonthsSessions] = await Promise.all([
     // Available months (for the dropdown)
-    prisma.session.findMany({
+    db.session.findMany({
       where: { userId: session.user.id, status: 'CLOSED' },
       select: { date: true },
       orderBy: { date: 'asc' },
     }),
-    prisma.session.findMany({
+    db.session.findMany({
       where: {
         userId: session.user.id,
         status: 'CLOSED',
@@ -79,7 +80,7 @@ export default async function HistoryPage({ searchParams }: Props) {
       orderBy: { date: 'asc' },
     }),
     // 1. Compare with previous month
-    prisma.session.findMany({
+    db.session.findMany({
       where: {
         userId: session.user.id,
         status: 'CLOSED',
@@ -89,7 +90,7 @@ export default async function HistoryPage({ searchParams }: Props) {
       select: { icoScore: true },
     }),
     // 6. Talón de Aquiles multi-mes
-    prisma.session.findMany({
+    db.session.findMany({
       where: {
         userId: session.user.id,
         status: 'CLOSED',

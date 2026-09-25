@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,6 +22,7 @@ export async function POST() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   // Rango del día actual (mismo criterio que en /api/intention)
   const startOfToday = getStartOfToday()
@@ -29,7 +30,7 @@ export async function POST() {
 
   // Buscamos la intención de hoy con su sesión ya incluida.
   // Necesitamos session para saber si ya existe (evitar crear duplicado).
-  const intention = await prisma.dailyIntention.findFirst({
+  const intention = await db.dailyIntention.findFirst({
     where: {
       userId: session.user.id,
       date: {
@@ -67,9 +68,9 @@ export async function POST() {
   // sean atómicas: o las dos operaciones ocurren, o ninguna.
   const confirmTimestamp = new Date()
 
-  const [updatedIntention] = await prisma.$transaction([
+  const [updatedIntention] = await db.$transaction([
     // 1. Marcar la intención como confirmada
-    prisma.dailyIntention.update({
+    db.dailyIntention.update({
       where: { id: intention.id },
       data: { confirmedAt: confirmTimestamp },
       include: {
@@ -85,7 +86,7 @@ export async function POST() {
       },
     }),
     // 2. Crear la sesión de trading vinculada a esta intención
-    prisma.session.create({
+    db.session.create({
       data: {
         userId: session.user.id,
         intentionId: intention.id,

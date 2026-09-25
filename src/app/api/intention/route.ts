@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { dbFor } from '@/lib/prisma'
 import { getStartOfToday, getStartOfTomorrow } from '@/lib/dates'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,11 +47,12 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   // Buscamos la intención cuya fecha caiga dentro del día de hoy (UTC).
   // Usamos un rango [hoy, mañana) en lugar de igualdad exacta para absorber
   // posibles diferencias de milisegundos si en el futuro se cambia la normalización.
-  const intention = await prisma.dailyIntention.findFirst({
+  const intention = await db.dailyIntention.findFirst({
     where: {
       userId: session.user.id,
       date: {
@@ -89,10 +90,11 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
   }
+  const db = dbFor(session.user)
 
   // Verificamos que el usuario tiene estrategia configurada.
   // Sin estrategia no hay límites que copiar ni catálogo de condiciones/reglas.
-  const strategy = await prisma.strategy.findUnique({
+  const strategy = await db.strategy.findUnique({
     where: { userId: session.user.id },
     select: {
       id: true,
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
 
   // Comprobamos si ya existe intención para hoy antes del insert,
   // para dar un mensaje de error claro en lugar del genérico de constraint única.
-  const existing = await prisma.dailyIntention.findFirst({
+  const existing = await db.dailyIntention.findFirst({
     where: {
       userId: session.user.id,
       date: {
@@ -137,7 +139,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const intention = await prisma.dailyIntention.create({
+  const intention = await db.dailyIntention.create({
     data: {
       userId: session.user.id,
       strategyId: strategy.id,
