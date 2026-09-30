@@ -15,8 +15,12 @@ import { getServerSession, authOptions } from '@/lib/auth'
 export default async function RootPage() {
   const session = await getServerSession(authOptions)
 
-  // Si hay sesión activa → dashboard; si no → login.
-  // El proxy (proxy.ts) también protege las rutas, pero hacer la redirección
-  // aquí da una respuesta más directa en lugar de pasar por el middleware.
-  redirect(session ? '/dashboard' : '/login')
+  // Si hay sesión activa → dashboard; si no → demo público.
+  //
+  // Quien llega a la raíz sin sesión casi siempre viene del portfolio o de un
+  // enlace compartido: lo llevamos directo al demo en vez de pedirle una
+  // cuenta que no tiene. Los usuarios reales entran por /login como siempre
+  // (el proxy sigue mandando allí a quien pida cualquier otra página sin
+  // sesión).
+  redirect(session ? '/dashboard' : '/api/demo-login')
 }

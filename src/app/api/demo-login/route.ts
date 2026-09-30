@@ -98,11 +98,14 @@ export async function GET(request: NextRequest) {
   const secure =
     process.env.NEXTAUTH_URL?.startsWith('https://') ?? Boolean(process.env.VERCEL)
 
-  // La base de la URL sale de NEXTAUTH_URL y no de la petición: en local el
-  // servidor escucha en 0.0.0.0 y request.url mandaría al navegador allí.
-  const response = NextResponse.redirect(
-    new URL('/dashboard', process.env.NEXTAUTH_URL ?? request.url),
-  )
+  // Redirección relativa: el navegador se queda en el mismo dominio por el
+  // que entró, que es donde acaba de recibir la cookie. Con una URL absoluta
+  // (NEXTAUTH_URL o request.url) podía acabar en otro dominio del proyecto,
+  // sin cookie, y de ahí al login; y en local request.url apunta a 0.0.0.0.
+  const response = new NextResponse(null, {
+    status: 307,
+    headers: { Location: '/dashboard' },
+  })
   response.cookies.set({
     name: `${secure ? '__Secure-' : ''}next-auth.session-token`,
     value: token,

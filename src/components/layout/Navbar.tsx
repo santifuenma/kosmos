@@ -92,7 +92,9 @@ function LogoutIcon() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function Navbar({ children }: { children: React.ReactNode }) {
+// isDemo llega del layout (servidor) y no de useSession(): así el botón de
+// cerrar sesión no llega ni a pintarse en el demo mientras carga la sesión.
+export default function Navbar({ children, isDemo = false }: { children: React.ReactNode; isDemo?: boolean }) {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -217,15 +219,19 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          {/* Cerrar sesión */}
-          <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className={styles.logoutBtn}
-            title="Cerrar sesión"
-          >
-            <LogoutIcon />
-            <span className={styles.logoutLabel}>Cerrar sesión</span>
-          </button>
+          {/* Cerrar sesión. En el demo público no se ofrece: quien entra desde
+              el portfolio no tiene cuenta propia a la que volver, y salir le
+              dejaría en la pantalla de login sin forma de regresar. */}
+          {!isDemo && (
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              className={styles.logoutBtn}
+              title="Cerrar sesión"
+            >
+              <LogoutIcon />
+              <span className={styles.logoutLabel}>Cerrar sesión</span>
+            </button>
+          )}
 
         </div>
       </aside>

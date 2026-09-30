@@ -60,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className={styles.appLayout}>
       <LiquidBackground />
-      <Navbar>{children}</Navbar>
+      <Navbar isDemo={isDemoUser(session.user.email)}>{children}</Navbar>
       {isDemoUser(session.user.email) && (
         <p className={styles.demoBanner} role="status">
           Estás viendo una demo con datos simulados. Puedes crear una sesión:

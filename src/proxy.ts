@@ -17,8 +17,9 @@
 //     intentando acceder a /login → lo mandamos al /dashboard)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { withAuth } from 'next-auth/middleware'
-import { NextResponse } from 'next/server'
+import { withAuth, type NextRequestWithAuth } from 'next-auth/middleware'
+import { getToken } from 'next-auth/jwt'
+import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server'
 import { isDemoUser } from '@/lib/demo'
 
 // Métodos HTTP que por definición no cambian nada.
@@ -34,7 +35,7 @@ const DEMO_SIMULATED_WRITES = new Set([
   '/api/session/close',
 ])
 
-export default withAuth(
+const authProxy = withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl
     const token = req.nextauth.token
@@ -89,7 +90,11 @@ export default withAuth(
         //
         // /api/demo-login es justo la ruta que abre la sesión del demo; quien
         // llega desde el portfolio todavía no tiene ninguna.
+        //
+        // La raíz "/" también: sin sesión, src/app/page.tsx manda al demo, y
+        // eso solo pasa si el proxy la deja llegar hasta ahí.
         if (
+          pathname === '/' ||
           pathname === '/login' ||
           pathname === '/register' ||
           pathname === '/verify' ||
@@ -106,6 +111,25 @@ export default withAuth(
     },
   },
 )
+
+export default async function proxy(req: NextRequest, event: NextFetchEvent) {
+  // ── Demo público: sin cierre de sesión ───────────────────────────────────
+  // La interfaz no ofrece "Cerrar sesión" en el demo; esto cubre a quien
+  // llame a mano a la ruta de NextAuth que la cierra. Va aquí fuera y no
+  // dentro de withAuth porque withAuth deja pasar todo /api/auth sin ejecutar
+  // nuestro código. La página (GET) vuelve al dashboard; la llamada que hace
+  // signOut() (POST) recibe un 403.
+  if (req.nextUrl.pathname.startsWith('/api/auth/signout')) {
+    const token = await getToken({ req })
+    if (isDemoUser(token?.email)) {
+      return req.method === 'GET'
+        ? NextResponse.redirect(new URL('/dashboard', req.url))
+        : NextResponse.json({ error: 'El demo no permite cerrar sesión' }, { status: 403 })
+    }
+  }
+
+  return authProxy(req as NextRequestWithAuth, event)
+}
 
 export const config = {
   // Aplicamos el proxy a todas las rutas excepto:
