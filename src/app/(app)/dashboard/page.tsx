@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { getServerSession, authOptions } from '@/lib/auth'
 import { dbFor } from '@/lib/prisma'
 import { loadDemoSandbox } from '@/lib/demoSandbox'
-import { getStartOfToday, getStartOfTomorrow, getISOWeekNumber, getMondayUTC } from '@/lib/dates'
+import { getStartOfToday, getStartOfTomorrow, getMondayUTC } from '@/lib/dates'
+import { computeWeeklyIco } from '@/lib/ico'
 import { capitalize, countSessionViolations } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { IcoCard } from '@/components/cards/IcoCard'
@@ -41,9 +42,13 @@ export default async function DashboardPage() {
   const startOfTomorrow = getStartOfTomorrow(now)
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
   const startOfNextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+  // El gráfico semanal agrupa de lunes a domingo, igual que /api/history/weekly.
+  // Si el mes no empieza en lunes, la primera semana arranca en el mes anterior:
+  // pedimos también esos días para que su ICO semanal salga con la semana completa.
+  const chartStart = getMondayUTC(startOfMonth)
 
   // ── Parallel data fetch ──────────────────────────────────────────────────
-  const [strategy, dbTodayIntention, lastClosedSession, dbMonthSessions, demo] = await Promise.all([
+  const [strategy, dbTodayIntention, lastClosedSession, dbChartSessions, demo] = await Promise.all([
     db.strategy.findUnique({
       where: { userId: session.user.id },
       select: {
@@ -89,7 +94,7 @@ export default async function DashboardPage() {
       where: {
         userId: session.user.id,
         status: 'CLOSED',
-        date: { gte: startOfMonth, lt: startOfNextMonth },
+        date: { gte: chartStart, lt: startOfNextMonth },
       },
       select: {
         id: true,
@@ -108,10 +113,13 @@ export default async function DashboardPage() {
   const todayIntention = demo
     ? ({ ...demo.intention, session: demo.session } as unknown as typeof dbTodayIntention)
     : dbTodayIntention
-  const monthSessions =
+  const chartSessions =
     demo?.session?.status === 'CLOSED'
-      ? [...dbMonthSessions, demo.session as unknown as (typeof dbMonthSessions)[number]]
-      : dbMonthSessions
+      ? [...dbChartSessions, demo.session as unknown as (typeof dbChartSessions)[number]]
+      : dbChartSessions
+  // Las métricas del mes (media, violaciones, P&L, calendario) solo cuentan
+  // los días de este mes; los del mes anterior son solo para el gráfico.
+  const monthSessions = chartSessions.filter((s) => new Date(s.date) >= startOfMonth)
 
   // Solo el nombre de pila: el saludo es informal y el apellido sobra.
   // El email es el respaldo si por lo que sea la sesión no trae nombre.
@@ -139,24 +147,27 @@ export default async function DashboardPage() {
   )
   const hasPnl = monthSessions.some((s) => s.trades.some((t) => t.pnlAmount !== null))
 
-  const weekMap = new Map<number, { icos: number[]; monday: Date }>()
-  for (const s of monthSessions) {
+  // Agrupamos por el lunes de cada semana (su timestamp), no por nº de semana
+  // ISO: así el orden es cronológico también cuando diciembre acaba en la
+  // semana 1 del año siguiente.
+  const weekMap = new Map<number, number[]>()
+  for (const s of chartSessions) {
     if (s.icoScore === null) continue
-    const date = new Date(s.date)
-    const wk = getISOWeekNumber(date)
-    const entry = weekMap.get(wk) ?? { icos: [], monday: getMondayUTC(date) }
-    entry.icos.push(s.icoScore * 100)
-    weekMap.set(wk, entry)
+    const monday = getMondayUTC(new Date(s.date)).getTime()
+    weekMap.set(monday, [...(weekMap.get(monday) ?? []), s.icoScore])
   }
 
+  // El valor de cada semana es el ICO semanal de `lib/ico.ts` (70 % media +
+  // 30 % estabilidad), la misma fórmula que /api/history/weekly.
   const weeklyChartData = Array.from(weekMap.entries())
     .sort(([a], [b]) => a - b)
-    .map(([, { icos, monday }], i) => {
+    .map(([mondayTime, icos], i) => {
+      const monday = new Date(mondayTime)
       const sunday = new Date(monday)
       sunday.setUTCDate(monday.getUTCDate() + 6)
       return {
         label: `${i + 1}`,
-        ico: Math.round(icos.reduce((a, b) => a + b, 0) / icos.length),
+        ico: Math.round(computeWeeklyIco(icos)!.icoWeekly * 100),
         weekStart: monday.toISOString(),
         weekEnd: sunday.toISOString(),
       }
