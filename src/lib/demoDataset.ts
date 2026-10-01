@@ -2,15 +2,22 @@
 // demoDataset.ts — el historial de ejemplo del demo público.
 //
 // Genera la estrategia y las sesiones de la cuenta demo a partir de la fecha
-// de hoy: el mes en curso (hasta ayer) y los dos anteriores. Así, entre quien
-// entre cuando entre, el dashboard y el historial tienen datos del mes actual.
+// de hoy: el mes en curso entero y los dos anteriores. Así, entre quien entre
+// cuando entre (también el día 1), el dashboard y el historial tienen datos
+// del mes actual.
+//
+// ── El mes en curso sale completo ───────────────────────────────────────────
+// Incluye también los días que aún no han llegado. No es lo más realista,
+// pero si no, los primeros días de cada mes el calendario del dashboard
+// saldría vacío. Hoy se deja siempre libre: es el día en el que el visitante
+// crea su propia sesión simulada (src/lib/demoSandbox.ts).
 //
 // ── "Los mismos datos, movidos al mes actual" ───────────────────────────────
 // Cada día se genera con una semilla fija que depende solo de su posición:
 // cuántos meses hace (0 = este, 1 = el pasado, 2 = el anterior) y qué día del
 // mes es. El día 14 del mes en curso sale siempre igual, sea septiembre u
-// octubre. Dentro de un mes los días ya pasados no cambian; solo se añade el
-// de ayer.
+// octubre: lo que había en septiembre pasa tal cual a octubre. De un día a
+// otro solo cambia qué día queda libre (el de hoy).
 //
 // ── La historia que cuentan los datos ───────────────────────────────────────
 // Un trader que va mejorando: hace dos meses era irregular (días de revenge
@@ -26,7 +33,7 @@ import { getStartOfToday } from '@/lib/dates'
 
 // Cambiar este número obliga a regenerar el demo aunque ya estuviera al día:
 // forma parte de los ids, y la comprobación de "está al día" compara ids.
-export const DEMO_DATASET_VERSION = 3
+export const DEMO_DATASET_VERSION = 4
 
 // Nombre con el que la app saluda al visitante: "Hola, Bienvenido".
 export const DEMO_USER_NAME = { firstName: 'Bienvenido', lastName: '' }
@@ -333,8 +340,8 @@ function buildDay(date: Date, monthsAgo: 0 | 1 | 2, rng: Rng): DemoDay {
   }
 }
 
-// Todas las sesiones del demo para la fecha dada: los dos meses anteriores
-// completos y el actual hasta ayer. Solo días laborables, y no todos: un
+// Todas las sesiones del demo para la fecha dada: los dos meses anteriores y
+// el actual, completos, salvo hoy. Solo días laborables, y no todos: un
 // trader real se salta alguno.
 export function buildDemoDataset(now: Date = new Date()): DemoDay[] {
   const today = getStartOfToday(now)
@@ -347,7 +354,7 @@ export function buildDemoDataset(now: Date = new Date()): DemoDay[] {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(Date.UTC(year, month, day))
-      if (date >= today) break
+      if (date.getTime() === today.getTime()) continue // hoy, libre para el visitante
       const weekday = date.getUTCDay()
       if (weekday === 0 || weekday === 6) continue
 

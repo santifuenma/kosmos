@@ -43,18 +43,21 @@ const LOCK_ID = 7_202_609
 // comprueba una vez al día como mucho.
 let checkedDay: string | null = null
 
-// ¿Coincide lo guardado con lo que toca hoy? Basta con mirar la última sesión:
-// su id lleva la fecha y la versión del generador.
+// ¿Coincide lo guardado con lo que toca hoy? Se comparan los ids de todas las
+// sesiones (llevan la fecha y la versión del generador): de un día a otro
+// cambia qué día queda libre, y eso no se ve mirando solo la última.
 async function isFresh(
   db: Pick<typeof prisma, 'session' | 'strategy'>,
   userId: string,
-  expectedLast: DemoDay | undefined,
+  expected: DemoDay[],
 ) {
-  const [last, strategy] = await Promise.all([
-    db.session.findFirst({ where: { userId }, orderBy: { date: 'desc' }, select: { id: true } }),
+  const [sessions, strategy] = await Promise.all([
+    db.session.findMany({ where: { userId }, select: { id: true } }),
     db.strategy.findUnique({ where: { userId }, select: { name: true } }),
   ])
-  return last?.id === expectedLast?.sessionId && strategy?.name === DEMO_STRATEGY.name
+  const stored = sessions.map((s) => s.id).sort().join(',')
+  const wanted = expected.map((d) => d.sessionId).sort().join(',')
+  return stored === wanted && strategy?.name === DEMO_STRATEGY.name
 }
 
 // Deja el demo al día. No lanza: si algo falla lo registra y el demo sigue
@@ -68,9 +71,8 @@ export async function ensureDemoDataFresh({ force = false } = {}): Promise<void>
     if (!user) return
 
     const days = buildDemoDataset()
-    const expectedLast = days[days.length - 1]
 
-    if (!force && (await isFresh(prisma, user.id, expectedLast))) {
+    if (!force && (await isFresh(prisma, user.id, days))) {
       checkedDay = today
       return
     }
@@ -78,7 +80,7 @@ export async function ensureDemoDataFresh({ force = false } = {}): Promise<void>
     await prisma.$transaction(
       async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${LOCK_ID})`
-        if (!force && (await isFresh(tx, user.id, expectedLast))) return
+        if (!force && (await isFresh(tx, user.id, days))) return
         await rewriteDemoData(tx, user.id, days)
       },
       { timeout: 30_000, maxWait: 10_000 },

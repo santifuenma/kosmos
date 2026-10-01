@@ -141,8 +141,10 @@ navegador y se borra cada vez que entra por `/api/demo-login` o pulsa
 ### Historial de ejemplo que se mueve con el calendario
 
 La estrategia y las sesiones del demo no son fijas: las genera
-[`demoDataset.ts`](src/lib/demoDataset.ts) a partir de la fecha de hoy (el mes
-actual hasta ayer y los dos anteriores). Cada día del mes sale siempre igual, así
+[`demoDataset.ts`](src/lib/demoDataset.ts) a partir de la fecha de hoy: el mes
+actual entero (también los días que aún no han llegado, para que el calendario no
+salga vacío a principios de mes) y los dos anteriores. Hoy queda siempre libre
+para la sesión simulada del visitante. Cada día del mes sale siempre igual, así
 que es el mismo historial desplazado al calendario actual, con un trader que va
 mejorando mes a mes.
 

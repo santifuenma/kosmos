@@ -14,20 +14,24 @@ describe('buildDemoDataset', () => {
     expect(buildDemoDataset(SEPT_25)).toEqual(buildDemoDataset(SEPT_25))
   })
 
-  it('cubre el mes actual hasta ayer y los dos anteriores', () => {
+  it('cubre el mes actual entero y los dos anteriores', () => {
     const days = buildDemoDataset(SEPT_25)
-    const first = days[0].date
-    const last = days[days.length - 1].date
-    expect(first.getUTCMonth()).toBe(6) // julio
-    expect(last < new Date(Date.UTC(2026, 8, 25))).toBe(true)
-    expect(last.getUTCMonth()).toBe(8) // septiembre
+    expect(days[0].date.getUTCMonth()).toBe(6) // julio
+    expect(days[days.length - 1].date.getUTCMonth()).toBe(8) // septiembre
+    // También días posteriores a hoy, para que el calendario no salga vacío.
+    expect(days.some((d) => d.date > new Date(Date.UTC(2026, 8, 25)))).toBe(true)
   })
 
-  it('solo genera días laborables y nunca hoy ni días futuros', () => {
+  it('el día 1 del mes el mes actual ya tiene sesiones', () => {
+    const oct1 = new Date(Date.UTC(2026, 9, 1, 10, 0))
+    expect(buildDemoDataset(oct1).filter((d) => d.monthsAgo === 0).length).toBeGreaterThan(10)
+  })
+
+  it('solo genera días laborables y deja hoy libre', () => {
     const today = new Date(Date.UTC(2026, 8, 25))
     for (const d of buildDemoDataset(SEPT_25)) {
       expect([0, 6]).not.toContain(d.date.getUTCDay())
-      expect(d.date < today).toBe(true)
+      expect(d.date.getTime()).not.toBe(today.getTime())
     }
   })
 
